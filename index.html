@@ -2508,11 +2508,11 @@ async function loadFromSheet(){
   // 온라인: 구글 시트에서 보완 (다른 기기 데이터 포함)
   try {
     const controller = new AbortController();
-    const timeout = setTimeout(()=>controller.abort(), 5000); // 5초 타임아웃
+    const timeout = setTimeout(()=>controller.abort(), 5000);
     const res  = await fetch(GS_URL + '?t=' + Date.now(), {signal: controller.signal});
     clearTimeout(timeout);
     const data = await res.json();
-    if(data.result==='success' && data.rows && data.rows.length>1){
+    if(data.result==='success' && data.rows && data.rows.length>1 && data.rows[0][0]!==''){
       // 구글 시트 데이터로 DB 갱신
       const tx    = _db.transaction('logs','readwrite');
       const store = tx.objectStore('logs');
@@ -2546,6 +2546,9 @@ async function loadFromSheet(){
       renderStudents(); renderStats();
       updateSyncStatus(`✅ ${data.rows.length-1}건 동기화 완료`);
       setTimeout(()=>updateSyncStatus(''),3000);
+    } else {
+      // 데이터 없음 — 메시지 그냥 지움
+      updateSyncStatus('');
     }
   } catch(e){
     updateSyncStatus(''); // 타임아웃/실패 시 그냥 지움
