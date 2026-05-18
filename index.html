@@ -2408,7 +2408,7 @@ const catTotal = { nature: 0, life: 0, sound: 0, heart: 0 };
 const allLogs = [];
 
 // ============ 구글 시트 연동 ============
-const GS_URL = 'https://script.google.com/macros/s/AKfycbzaL7kdqFr_zuYqprKZsEc7U9lg2m2t00NOZW-c9BzwxWZNbzng_8Xuv-6c3vshjOccyA/exec';
+const GS_URL = 'https://script.google.com/macros/s/AKfycbwk9iB2M3YMFdG8AJgfJ6ctKCldENAEcrKY8bm_nLAItOtssYmtaNqZxFSfVdYLRUJmdw/exec';
 
 /* ============================================================
    오프라인 우선 저장 시스템
@@ -2535,7 +2535,7 @@ async function syncPendingToSheet(){
 
   try {
     await fetch(GS_URL,{
-      method:'POST', mode:'no-cors',
+      method:'POST',
       headers:{'Content-Type':'application/json'},
       body: JSON.stringify({logs})
     });
@@ -2543,7 +2543,8 @@ async function syncPendingToSheet(){
     updateSyncStatus(`✅ ${unsync.length}건 동기화 완료`);
     setTimeout(()=>updateSyncStatus(''),3000);
   } catch(e){
-    updateSyncStatus('');
+    updateSyncStatus('⚠️ 동기화 실패 — 재시도 중');
+    setTimeout(()=>updateSyncStatus(''),3000);
   }
 }
 
@@ -2554,20 +2555,13 @@ function updateSyncStatus(msg){
 
 // 로그 저장 (오프라인 우선)
 function syncToSheet(log){
-  // 1. IndexedDB에 즉시 저장
   saveLogToDB(log);
-  // 2. 온라인이면 바로 구글 시트로도 전송 시도
   if(navigator.onLine){
-    fetch(GS_URL,{
-      method:'POST', mode:'no-cors',
+    fetch(GS_URL, {
+      method:'POST',
       headers:{'Content-Type':'application/json'},
       body: JSON.stringify({logs:[log]})
-    }).then(async ()=>{
-      // 방금 저장한 항목 synced 처리
-      const unsync = await getUnsyncedLogs();
-      const last   = unsync[unsync.length-1];
-      if(last) await markSynced([last._id]);
-    }).catch(()=>{}); // 실패해도 DB엔 저장됨
+    }).catch(()=>{});
   }
 }
 
