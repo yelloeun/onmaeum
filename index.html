@@ -13,6 +13,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Gowun+Dodum&family=Noto+Sans+KR:wght@400;500;700;900&family=Gaegu:wght@400;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <script>
 // PWA 아이콘 생성 (자연스러운 나뭇잎)
 function makePWAIcon(size){
@@ -2437,24 +2439,15 @@ let _fbDB = null;
 // Firebase 초기화
 function initFirebase(){
   return new Promise((resolve)=>{
-    // Firebase SDK 동적 로드
-    const script = document.createElement('script');
-    script.src = 'https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js';
-    script.onload = ()=>{
-      const script2 = document.createElement('script');
-      script2.src = 'https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js';
-      script2.onload = ()=>{
-        try {
-          if(!firebase.apps.length) firebase.initializeApp(FB_CONFIG);
-          _fbDB = firebase.database();
-          resolve(true);
-        } catch(e){ resolve(false); }
-      };
-      script2.onerror = ()=>resolve(false);
-      document.head.appendChild(script2);
-    };
-    script.onerror = ()=>resolve(false);
-    document.head.appendChild(script);
+    try {
+      if(!firebase.apps.length) firebase.initializeApp(FB_CONFIG);
+      _fbDB = firebase.database();
+      console.log('Firebase 초기화 성공!');
+      resolve(true);
+    } catch(e){
+      console.error('Firebase 초기화 실패:', e);
+      resolve(false);
+    }
   });
 }
 
