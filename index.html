@@ -6007,13 +6007,6 @@ function renderAdminResetInfo(){
   const totalPts=students.reduce((a,s)=>a+s.total,0);
   el.innerHTML=`📋 활동 기록: <b>${actCnt}건</b><br>🥣 잔반 기록: <b>${janCnt}건</b><br>🌳 전체 누적 점수: <b>${totalPts}점</b><br>👤 학생 수: <b>${students.length}명</b>`;
 }
-  const el=document.getElementById('adminResetInfo');
-  if(!el) return;
-  const actCnt=allLogs.filter(l=>l.type!=='janban').length;
-  const janCnt=allLogs.filter(l=>l.type==='janban').length;
-  const totalPts=students.reduce((a,s)=>a+s.total,0);
-  el.innerHTML=`📋 활동 기록: <b>${actCnt}건</b><br>🥣 잔반 기록: <b>${janCnt}건</b><br>🌳 전체 누적 점수: <b>${totalPts}점</b><br>👤 학생 수: <b>${students.length}명</b>`;
-}
 
 async function resetAllData(){
   if(!confirm('⚠️ 정말 모든 데이터를 초기화할까요?\n이 작업은 되돌릴 수 없어요!')) return;
