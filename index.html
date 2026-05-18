@@ -2411,10 +2411,199 @@ const allLogs = [];
 const GS_URL = 'https://script.google.com/macros/s/AKfycbwk9iB2M3YMFdG8AJgfJ6ctKCldENAEcrKY8bm_nLAItOtssYmtaNqZxFSfVdYLRUJmdw/exec';
 
 /* ============================================================
-   오프라인 우선 저장 시스템
-   1. 입력 → IndexedDB에 즉시 저장 (오프라인도 OK)
-   2. 온라인 감지 → 미동기 항목 자동으로 구글 시트 전송
+   Firebase 실시간 동기화
+   - 와이파이 있으면 실시간으로 3대 태블릿 동기화
+   - 와이파이 없으면 로컬(IndexedDB)에 저장 후 연결 시 자동 동기화
    ============================================================ */
+
+// Firebase 설정
+const FB_CONFIG = {
+  apiKey: "AIzaSyDQQ1FplWG0SJei-KKUSsi5FplesvuFHTE",
+  databaseURL: "https://onmaum-eff08-default-rtdb.firebaseio.com",
+  appId: "1:456772073367:web:8cd096af6e27dd6d1236d2",
+  projectId: "onmaum-eff08"
+};
+
+let _fbDB = null;
+
+// Firebase 초기화
+function initFirebase(){
+  return new Promise((resolve)=>{
+    // Firebase SDK 동적 로드
+    const script = document.createElement('script');
+    script.src = 'https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js';
+    script.onload = ()=>{
+      const script2 = document.createElement('script');
+      script2.src = 'https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js';
+      script2.onload = ()=>{
+        try {
+          if(!firebase.apps.length) firebase.initializeApp(FB_CONFIG);
+          _fbDB = firebase.database();
+          resolve(true);
+        } catch(e){ resolve(false); }
+      };
+      script2.onerror = ()=>resolve(false);
+      document.head.appendChild(script2);
+    };
+    script.onerror = ()=>resolve(false);
+    document.head.appendChild(script);
+  });
+}
+
+// Firebase에 로그 저장
+function syncToSheet(log){
+  saveLogToDB(log); // IndexedDB 백업도 유지
+  if(_fbDB){
+    const entry = {
+      date: log.date.getTime(),
+      studentId: log.studentId,
+      grade: log.grade,
+      activity: log.activity,
+      category: log.category,
+      points: log.points,
+      type: log.type,
+      weight: log.weight || null,
+      ts: Date.now()
+    };
+    _fbDB.ref('logs').push(entry).catch(()=>{});
+  }
+}
+
+// Firebase에서 전체 데이터 불러오기 (실시간 리스너)
+function loadFromSheet(){
+  updateSyncStatus('☁️ 데이터 불러오는 중...');
+
+  if(!_fbDB){
+    // Firebase 없으면 IndexedDB에서 로드
+    loadLogsFromDB().then(()=>{
+      updateSyncStatus('');
+    });
+    return;
+  }
+
+  const logsRef = _fbDB.ref('logs');
+  logsRef.once('value').then(snap=>{
+    const fbData = snap.val();
+    if(!fbData){
+      // Firebase 비어있으면 IndexedDB에서 로드
+      loadLogsFromDB().then(()=>{ updateSyncStatus(''); });
+      return;
+    }
+
+    // Firebase 데이터로 앱 상태 재구성
+    allLogs.length = 0;
+    students.forEach(s=>{ s.total=0; s.today=0; });
+    Object.keys(catTotal).forEach(k=>{ catTotal[k]=0; });
+
+    const today = new Date();
+    const todayStr = `${today.getFullYear()}-${today.getMonth()+1}-${today.getDate()}`;
+
+    Object.values(fbData).forEach(r=>{
+      if(!r.studentId || !r.activity) return;
+      const s = students.find(x=>x.id===r.studentId);
+      if(!s) return;
+      const logDate = new Date(r.date);
+      const log = {
+        date: logDate,
+        studentId: r.studentId,
+        grade: r.grade,
+        activity: r.activity,
+        category: r.category,
+        points: Number(r.points)||0,
+        type: r.type||'activity'
+      };
+      if(r.weight) log.weight = r.weight;
+      allLogs.push(log);
+      s.total += log.points;
+      const ds = `${logDate.getFullYear()}-${logDate.getMonth()+1}-${logDate.getDate()}`;
+      if(ds===todayStr) s.today += log.points;
+      if(r.category) catTotal[r.category] = (catTotal[r.category]||0) + log.points;
+    });
+
+    renderStudents(); renderStats();
+    updateSyncStatus(`✅ ${Object.keys(fbData).length}건 동기화 완료`);
+    setTimeout(()=>updateSyncStatus(''), 3000);
+
+  }).catch(()=>{
+    loadLogsFromDB().then(()=>{ updateSyncStatus(''); });
+  });
+
+  // 실시간 리스너 — 다른 태블릿에서 입력하면 자동 반영
+  logsRef.on('child_added', snap=>{
+    const r = snap.val();
+    if(!r || !r.studentId || !r.activity) return;
+    const s = students.find(x=>x.id===r.studentId);
+    if(!s) return;
+
+    const logDate = new Date(r.date);
+    const already = allLogs.some(l=>
+      l.studentId===r.studentId &&
+      l.date.getTime()===logDate.getTime() &&
+      l.activity===r.activity
+    );
+    if(already) return;
+
+    const log = {
+      date: logDate,
+      studentId: r.studentId,
+      grade: r.grade,
+      activity: r.activity,
+      category: r.category,
+      points: Number(r.points)||0,
+      type: r.type||'activity'
+    };
+    if(r.weight) log.weight = r.weight;
+    allLogs.push(log);
+    s.total += log.points;
+
+    const today = new Date();
+    const todayStr = `${today.getFullYear()}-${today.getMonth()+1}-${today.getDate()}`;
+    const ds = `${logDate.getFullYear()}-${logDate.getMonth()+1}-${logDate.getDate()}`;
+    if(ds===todayStr) s.today += log.points;
+    if(r.category) catTotal[r.category] = (catTotal[r.category]||0) + log.points;
+
+    renderStudents(); renderStats();
+  });
+}
+
+// 오프라인 → 온라인 복귀 시 미동기 항목 Firebase로 전송
+async function syncPendingToSheet(){
+  if(!navigator.onLine || !_fbDB) return;
+  const unsync = await getUnsyncedLogs();
+  if(!unsync.length) return;
+  updateSyncStatus(`☁️ ${unsync.length}건 동기화 중...`);
+  const ids = [];
+  for(const r of unsync){
+    try {
+      await _fbDB.ref('logs').push({
+        date: r.date,
+        studentId: r.studentId,
+        grade: r.grade,
+        activity: r.activity,
+        category: r.category,
+        points: r.points,
+        type: r.type,
+        weight: r.weight||null,
+        ts: Date.now()
+      });
+      ids.push(r._id);
+    } catch(e){}
+  }
+  if(ids.length) await markSynced(ids);
+  updateSyncStatus(`✅ ${ids.length}건 동기화 완료`);
+  setTimeout(()=>updateSyncStatus(''), 3000);
+}
+
+window.addEventListener('online', ()=>{
+  updateSyncStatus('🌐 온라인 연결됨');
+  syncPendingToSheet();
+});
+window.addEventListener('offline', ()=>{
+  updateSyncStatus('📵 오프라인 모드');
+  setTimeout(()=>updateSyncStatus(''), 3000);
+});
+
+// 초기화
 
 let _db = null;
 const DB_NAME = 'onmaum_db';
@@ -7012,14 +7201,14 @@ try {
   setToday();
   renderStudents();
   renderStats();
-  // IndexedDB 초기화 후 데이터 로드
+  // IndexedDB 초기화 후 Firebase 연결
   initDB().then(()=>{
-    loadFromSheet();
-    // 주기적으로 미동기 항목 전송 시도 (1분마다)
-    setInterval(syncPendingToSheet, 60000);
+    initFirebase().then(()=>{
+      loadFromSheet();
+      setInterval(syncPendingToSheet, 60000);
+    });
   }).catch(()=>{
-    // DB 실패해도 구글 시트에서 직접 로드
-    loadFromSheet();
+    initFirebase().then(()=>loadFromSheet());
   });
 } catch(e) {
   console.error('Init error:', e);
