@@ -2161,12 +2161,20 @@ function triggerPWAInstall(){
           <option value="all">전체 학생</option>
         </select>
         <span id="adminActInfo" style="font-size:12px;color:var(--ink-soft)"></span>
+        <button onclick="deleteCheckedLogs()"
+          style="margin-left:auto;background:#E94F33;color:#fff;border:none;border-radius:10px;
+          padding:7px 16px;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer">
+          🗑️ 선택 삭제
+        </button>
       </div>
       <div style="overflow:auto;max-height:380px;border:1.5px solid var(--line);border-radius:14px">
         <table style="width:100%;border-collapse:collapse;font-size:13px">
           <thead>
             <tr style="background:#F0EDE5;position:sticky;top:0;z-index:2">
-              <th style="padding:9px 10px;text-align:center;border-bottom:2px solid var(--line);font-size:11px;color:var(--ink-soft);width:36px">#</th>
+              <th style="padding:9px 10px;text-align:center;border-bottom:2px solid var(--line);width:36px">
+                <input type="checkbox" id="actCheckAll" onclick="toggleAllActChecks(this)"
+                  style="width:16px;height:16px;accent-color:#E94F33;cursor:pointer">
+              </th>
               <th style="padding:9px 10px;text-align:center;border-bottom:2px solid var(--line);font-size:11px;color:var(--ink-soft)">아이콘</th>
               <th style="padding:9px 10px;text-align:left;border-bottom:2px solid var(--line);font-size:11px;color:var(--ink-soft)">이름</th>
               <th style="padding:9px 10px;text-align:center;border-bottom:2px solid var(--line);font-size:11px;color:var(--ink-soft)">날짜/시간</th>
@@ -2498,7 +2506,7 @@ function loadFromSheet(){
     const today = new Date();
     const todayStr = `${today.getFullYear()}-${today.getMonth()+1}-${today.getDate()}`;
 
-    Object.values(fbData).forEach(r=>{
+    Object.entries(fbData).forEach(([fbKey, r])=>{
       if(!r.studentId || !r.activity) return;
       const s = students.find(x=>x.id===r.studentId);
       if(!s) return;
@@ -2510,7 +2518,8 @@ function loadFromSheet(){
         activity: r.activity,
         category: r.category,
         points: Number(r.points)||0,
-        type: r.type||'activity'
+        type: r.type||'activity',
+        _fbKey: fbKey  // Firebase 키 저장
       };
       if(r.weight) log.weight = r.weight;
       allLogs.push(log);
@@ -5913,7 +5922,7 @@ function renderAdminActivityTable(){
     .sort((a,b)=>b.date-a.date);
   if(info) info.textContent = `${actLogs.length}건`;
   if(actLogs.length===0){
-    tbody.innerHTML=`<tr><td colspan="7" style="text-align:center;padding:32px;color:#aaa;font-size:13px">활동 기록이 없어요</td></tr>`;
+    tbody.innerHTML=`<tr><td colspan="8" style="text-align:center;padding:32px;color:#aaa;font-size:13px">활동 기록이 없어요</td></tr>`;
     return;
   }
   const catColors={nature:'#3D7A4A',life:'#C49A3F',sound:'#3F8AA6',heart:'#D86B7B'};
@@ -5923,7 +5932,10 @@ function renderAdminActivityTable(){
     const s=students.find(x=>x.id===l.studentId);
     const bg=rowN%2===0?'#fff':'#FAFAF6';
     return `<tr style="background:${bg}" id="actRow_${l._idx}">
-      <td style="padding:8px 10px;text-align:center;border-bottom:1px solid #f0ece4;color:#bbb;font-size:11px">${rowN+1}</td>
+      <td style="padding:8px 10px;text-align:center;border-bottom:1px solid #f0ece4">
+        <input type="checkbox" class="actCheck" data-idx="${l._idx}"
+          style="width:16px;height:16px;accent-color:#E94F33;cursor:pointer">
+      </td>
       <td style="padding:8px 10px;text-align:center;border-bottom:1px solid #f0ece4;font-size:18px">${s?s.emoji:'👤'}</td>
       <td style="padding:8px 10px;font-weight:700;border-bottom:1px solid #f0ece4">${l.studentId}</td>
       <td style="padding:8px 10px;text-align:center;border-bottom:1px solid #f0ece4;color:#888;font-size:11px">${ds}</td>
@@ -5932,7 +5944,7 @@ function renderAdminActivityTable(){
       <td style="padding:8px 10px;text-align:center;border-bottom:1px solid #f0ece4">
         <button onclick="deleteActivityLog(${l._idx})"
           style="background:#E94F33;color:#fff;border:none;border-radius:7px;
-          padding:4px 10px;font-family:inherit;font-size:11px;font-weight:700;cursor:pointer">🗑️ 삭제</button>
+          padding:4px 10px;font-family:inherit;font-size:11px;font-weight:700;cursor:pointer">🗑️</button>
       </td>
     </tr>`;
   }).join('');
@@ -5945,25 +5957,63 @@ function deleteActivityLog(idx){
   const s = students.find(x=>x.id===l.studentId);
   if(s){ s.total=Math.max(0,s.total-l.points); s.today=Math.max(0,s.today-l.points); }
   if(l.category) catTotal[l.category]=Math.max(0,(catTotal[l.category]||0)-l.points);
-  if(_db){
-    const tx=_db.transaction('logs','readwrite');
-    const store=tx.objectStore('logs');
-    const req=store.openCursor();
-    req.onsuccess=e=>{
-      const cursor=e.target.result;
-      if(cursor){
-        const r=cursor.value;
-        if(r.studentId===l.studentId&&r.date===l.date.getTime()&&r.activity===l.activity){ cursor.delete(); }
-        else cursor.continue();
-      }
-    };
+
+  // Firebase에서 삭제
+  if(_fbDB && l._fbKey){
+    _fbDB.ref('logs/'+l._fbKey).remove().catch(()=>{});
+  } else if(_fbDB){
+    // fbKey 없으면 날짜+학생+활동으로 검색해서 삭제
+    _fbDB.ref('logs').orderByChild('ts').once('value', snap=>{
+      snap.forEach(child=>{
+        const v = child.val();
+        if(v.studentId===l.studentId && v.date===l.date.getTime() && v.activity===l.activity){
+          child.ref.remove();
+        }
+      });
+    });
   }
+
   allLogs.splice(idx,1);
   renderAdminActivityTable();
   renderStudents(); renderStats();
 }
 
+function toggleAllActChecks(cb){
+  document.querySelectorAll('.actCheck').forEach(c=>{ c.checked = cb.checked; });
+}
+
+async function deleteCheckedLogs(){
+  const checked = [...document.querySelectorAll('.actCheck:checked')];
+  if(checked.length===0){ alert('삭제할 항목을 선택해주세요!'); return; }
+  if(!confirm(`선택한 ${checked.length}건을 삭제할까요?`)) return;
+
+  const idxList = checked.map(c=>parseInt(c.dataset.idx)).sort((a,b)=>b-a);
+
+  for(const idx of idxList){
+    const l = allLogs[idx];
+    if(!l) continue;
+    const s = students.find(x=>x.id===l.studentId);
+    if(s){ s.total=Math.max(0,s.total-l.points); s.today=Math.max(0,s.today-l.points); }
+    if(l.category) catTotal[l.category]=Math.max(0,(catTotal[l.category]||0)-l.points);
+    if(_fbDB && l._fbKey){
+      await _fbDB.ref('logs/'+l._fbKey).remove().catch(()=>{});
+    }
+    allLogs.splice(idx,1);
+  }
+
+  renderAdminActivityTable();
+  renderStudents(); renderStats();
+  alert(`✅ ${idxList.length}건 삭제 완료!`);
+}
+
 function renderAdminResetInfo(){
+  const el=document.getElementById('adminResetInfo');
+  if(!el) return;
+  const actCnt=allLogs.filter(l=>l.type!=='janban').length;
+  const janCnt=allLogs.filter(l=>l.type==='janban').length;
+  const totalPts=students.reduce((a,s)=>a+s.total,0);
+  el.innerHTML=`📋 활동 기록: <b>${actCnt}건</b><br>🥣 잔반 기록: <b>${janCnt}건</b><br>🌳 전체 누적 점수: <b>${totalPts}점</b><br>👤 학생 수: <b>${students.length}명</b>`;
+}
   const el=document.getElementById('adminResetInfo');
   if(!el) return;
   const actCnt=allLogs.filter(l=>l.type!=='janban').length;
@@ -5978,6 +6028,13 @@ async function resetAllData(){
   allLogs.length=0;
   students.forEach(s=>{ s.total=0; s.today=0; });
   Object.keys(catTotal).forEach(k=>{ catTotal[k]=0; });
+
+  // Firebase 초기화
+  if(_fbDB){
+    await _fbDB.ref('logs').remove().catch(()=>{});
+  }
+
+  // IndexedDB 초기화
   if(_db){
     const tx=_db.transaction('logs','readwrite');
     tx.objectStore('logs').clear();
@@ -6108,6 +6165,21 @@ function adminDelete(idx){
   const s = students.find(x=>x.id===l.studentId);
   if(s){ s.today=Math.max(0,s.today-pts); s.total=Math.max(0,s.total-pts); }
   catTotal.nature = Math.max(0,(catTotal.nature||0)-pts);
+
+  // Firebase에서 삭제
+  if(_fbDB && l._fbKey){
+    _fbDB.ref('logs/'+l._fbKey).remove().catch(()=>{});
+  } else if(_fbDB){
+    _fbDB.ref('logs').once('value', snap=>{
+      snap.forEach(child=>{
+        const v = child.val();
+        if(v.studentId===l.studentId && v.date===l.date.getTime() && v.type==='janban'){
+          child.ref.remove();
+        }
+      });
+    });
+  }
+
   allLogs.splice(idx,1);
   renderAdminJanbanTable();
   renderStudents(); renderStats();
