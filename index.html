@@ -2642,12 +2642,16 @@ function saveLogToDB(log){
 function getUnsyncedLogs(){
   if(!_db) return Promise.resolve([]);
   return new Promise((resolve)=>{
-    const tx    = _db.transaction('logs','readonly');
-    const store = tx.objectStore('logs');
-    const idx   = store.index('synced');
-    const req   = idx.getAll(false);
-    req.onsuccess = ()=> resolve(req.result||[]);
-    req.onerror   = ()=> resolve([]);
+    try {
+      const tx    = _db.transaction('logs','readonly');
+      const store = tx.objectStore('logs');
+      const req   = store.getAll();
+      req.onsuccess = ()=>{
+        const all = req.result||[];
+        resolve(all.filter(r=>!r.synced));
+      };
+      req.onerror = ()=> resolve([]);
+    } catch(e){ resolve([]); }
   });
 }
 
