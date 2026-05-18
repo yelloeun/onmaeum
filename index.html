@@ -2711,36 +2711,6 @@ function loadLogsFromDB(){
 }
 
 // 온라인일 때 미동기 항목 구글 시트로 전송
-async function syncPendingToSheet(){
-  if(!navigator.onLine) return;
-  const unsync = await getUnsyncedLogs();
-  if(!unsync.length) return;
-
-  updateSyncStatus(`☁️ ${unsync.length}건 동기화 중...`);
-
-  const logs = unsync.map(r=>({
-    date:     new Date(r.date),
-    studentId:r.studentId, grade:r.grade,
-    activity: r.activity,  category:r.category,
-    points:   r.points,    type:r.type,
-    weight:   r.weight
-  }));
-
-  try {
-    await fetch(GS_URL,{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({logs})
-    });
-    await markSynced(unsync.map(r=>r._id));
-    updateSyncStatus(`✅ ${unsync.length}건 동기화 완료`);
-    setTimeout(()=>updateSyncStatus(''),3000);
-  } catch(e){
-    updateSyncStatus('⚠️ 동기화 실패 — 재시도 중');
-    setTimeout(()=>updateSyncStatus(''),3000);
-  }
-}
-
 function updateSyncStatus(msg){
   const el = document.getElementById('syncStatusMsg');
   if(el) el.textContent = msg;
