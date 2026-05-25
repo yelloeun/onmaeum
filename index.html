@@ -977,13 +977,13 @@ function triggerPWAInstall(){
       <div class="hero">
         <span class="sun">☀️</span>
         <h2>💛 <span style="color:#E94F33">남평행복</span> 온(溫)포인트 &nbsp;·&nbsp; 🏅 순위</h2>
-        <div class="sub">12명이 함께 모으는 온포인트 — 목표 10,000점까지 달려요!</div>
+        <div class="sub">12명이 함께 모으는 온포인트 — 목표 5,000점까지 달려요!</div>
         <div class="viz">
           <!-- 왼쪽: 하트 게이지 -->
           <div class="heart-gauge">
             <div class="hg-title">🫀 남평 행복 포인트</div>
             <div class="hg-score" id="heartScore">0</div>
-            <div class="hg-max">/ 10,000점</div>
+            <div class="hg-max">/ 5,000점</div>
             <div class="heart-svg-wrap">
               <svg viewBox="0 0 140 130" xmlns="http://www.w3.org/2000/svg">
                 <defs>
@@ -1495,7 +1495,7 @@ function triggerPWAInstall(){
     <div class="detail-grid">
       <div class="dpanel">
         <h3>🌳 현재 나의 나무 <span style="color:var(--ink-soft);font-size:11px;font-weight:600">My Tree</span></h3>
-        <p class="lead">30점당 1단계씩 자라요. 다음 단계까지 <b id="dRemain">30</b>점 남았어요!</p>
+        <p class="lead">10점당 1단계씩 자라요. 다음 단계까지 <b id="dRemain">10</b>점 남았어요!</p>
         <div class="my-tree">
           <svg viewBox="0 0 220 220" width="200" height="200">
             <defs>
@@ -3635,7 +3635,7 @@ ${months.map((m,i)=>`<tr>
 <table><thead><tr><th>순위</th><th>학생</th><th>학년</th><th>총점</th><th>단계</th></tr></thead><tbody>
 ${sPts.map((s,i)=>`<tr>
   <td>${i+1}위</td><td>${s.emoji} ${s.id}</td><td>${s.grade}</td>
-  <td>${s.pts}점</td><td>🌳 ${Math.min(30,Math.floor(s.pts/30))}/30</td>
+  <td>${s.pts}점</td><td>🌳 ${Math.min(30,Math.floor(s.pts/10))}/30</td>
 </tr>`).join('')}
 </tbody></table>
 
@@ -4321,7 +4321,7 @@ function showParentMsg(){
 ${top3.map((s,i)=>`${['🥇','🥈','🥉'][i]} ${s.id} (${s.grade}) — ${s.total}점`).join('\n')}
 
 🌳 온나무 성장 현황
-${students.map(s=>`${s.emoji}${s.id}: 나뭇잎 ${Math.min(30,Math.floor(s.total/30))}장`).join('  |  ')}
+${students.map(s=>`${s.emoji}${s.id}: 나뭇잎 ${Math.min(30,Math.floor(s.total/10))}장`).join('  |  ')}
 
 💚 가정에서도 함께해주세요!
 • 우유갑/두유팩을 깨끗이 씻어 학교로 보내주세요
@@ -4713,7 +4713,7 @@ function togglePlay(idx){
 function renderStudents(){
   const el = document.getElementById('grid12');
   el.innerHTML = students.map(s=>{
-    const stage = Math.min(30, Math.floor(s.total/30));
+    const stage = Math.min(30, Math.floor(s.total/10));
     return `
       <div class="card" onclick="openModal('${s.id}')">
         <div class="stage-mini">🌳 ${stage}/30</div>
@@ -4743,7 +4743,7 @@ function renderStats(){
 }
 
 function renderHeartGauge(total){
-  const MAX = 10000;
+  const MAX = 5000;
   const pct = Math.min(100, Math.round(total / MAX * 100));
   const fillH = 130 * (pct / 100);
   const safe = (id,val,attr,aval)=>{
@@ -4764,7 +4764,7 @@ function renderHeartGauge(total){
   else if(pct<50)   msg=`${pct}% 돌파! 절반이 보여요 🔥`;
   else if(pct<75)   msg=`${pct}%! 남평 최고 💪`;
   else if(pct<100)  msg=`${pct}%! 목표가 눈앞에 💛`;
-  else              msg='🎉 10,000점 달성! 남평 최강!!!';
+  else              msg='🎉 5,000점 달성! 남평 최강!!!';
   safe('hgMsg', msg);
 }
 
@@ -4807,7 +4807,7 @@ function renderRaceChart(){
 }
 
 function drawTree(total){
-  const stage = Math.min(30, Math.floor(total/30));
+  const stage = Math.min(30, Math.floor(total/10));
   const branches = document.getElementById('branches');
   const canopy   = document.getElementById('canopyG');
   const fruits   = document.getElementById('fruits');
@@ -5217,7 +5217,7 @@ function leafPath(x, y, rot, sz, colorIdx, posObj){
 let prevLeafCount = 0;
 
 function renderModalTree(total, animate){
-  const leafCount = Math.min(30, Math.floor(total / 30));
+  const leafCount = Math.min(30, Math.floor(total / 10));
 
   const group = document.getElementById('modalLeafGroup');
   if(!group) return;
@@ -5680,7 +5680,7 @@ function generateParentReport(id){
   const catPts = {nature:0,life:0,sound:0,heart:0};
   sLogs.forEach(l=>{ if(catPts[l.category]!==undefined) catPts[l.category]+=l.points; });
   const total = s.total;
-  const stage = Math.min(30, Math.floor(total/30));
+  const stage = Math.min(30, Math.floor(total/10));
   const jAvg = jLogs.length ? Math.round(jLogs.reduce((a,l)=>a+l.weight,0)/jLogs.length) : null;
   const redCnt = jLogs.filter(l=>l.weight<=70).length;
   const redPct = jLogs.length ? Math.round(redCnt/jLogs.length*100) : 0;
@@ -6541,13 +6541,13 @@ function openDetail(id){
   document.getElementById('dToday').textContent = s.today;
   document.getElementById('dTotal').textContent = s.total;
   document.getElementById('dWeek').textContent  = Math.round(s.today*3.4);
-  const stage = Math.min(30, Math.floor(s.total/30));
-  const pos = s.total%30;
+  const stage = Math.min(30, Math.floor(s.total/10));
+  const pos = s.total%10;
   document.getElementById('dStage').textContent = `${stage}/30`;
   document.getElementById('dStageNum').textContent = stage;
-  document.getElementById('dStageFill').style.width = (pos/30*100)+'%';
+  document.getElementById('dStageFill').style.width = (pos/10*100)+'%';
   document.getElementById('dStagePos').textContent = pos;
-  document.getElementById('dRemain').textContent = 30-pos;
+  document.getElementById('dRemain').textContent = 10-pos;
 
   drawTrend(id);
   drawPie(id);
@@ -6816,7 +6816,7 @@ function renderTeacher(){
   const sorted = [...students].sort((a,b)=>b.total-a.total);
   const max = Math.max(...students.map(s=>s.total), 1);
   document.querySelector('#rankTable tbody').innerHTML = sorted.map((s,i)=>{
-    const stage = Math.min(30, Math.floor(s.total/30));
+    const stage = Math.min(30, Math.floor(s.total/10));
     const pp = periodPts[s.id]||0;
     return `<tr>
       <td><span class="rk ${i<3?'top':''}">${i+1}</span></td>
