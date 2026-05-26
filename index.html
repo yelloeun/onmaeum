@@ -2209,7 +2209,19 @@ function triggerPWAInstall(){
           🔄 전체 초기화 실행
         </button>
       </div>
-      <div style="background:#F6F1E7;border:1.5px solid var(--line);border-radius:14px;padding:20px">
+      <div style="background:#F6F1E7;border:1.5px solid var(--line);border-radius:14px;padding:20px;margin-bottom:16px">
+        <div style="font-size:14px;font-weight:800;color:#555;margin-bottom:8px">🧹 중복 기록 정리</div>
+        <p style="font-size:13px;color:#666;line-height:1.6;margin:0 0 12px">
+          같은 학생·활동·시간이 중복 저장된 것을 자동으로 찾아서 삭제해요.<br>
+          <b>실제 기록은 유지되고 중복만 제거돼요!</b>
+        </p>
+        <button onclick="deduplicateLogs()"
+          style="background:#3D7A4A;color:#fff;border:none;border-radius:12px;
+          padding:12px 24px;font-family:inherit;font-size:14px;font-weight:800;cursor:pointer">
+          🧹 중복 기록 정리
+        </button>
+      </div>
+      <div style="background:#F6F1E7;border:1.5px solid var(--line);border-radius:14px;padding:20px;margin-bottom:16px">
         <div style="font-size:14px;font-weight:800;color:#555;margin-bottom:8px">📊 현재 데이터 현황</div>
         <div id="adminResetInfo" style="font-size:13px;color:#666;line-height:2"></div>
       </div>
@@ -2530,21 +2542,21 @@ function loadFromSheet(){
     loadLogsFromDB().then(()=>{ updateSyncStatus(''); });
   });
 
-  // 실시간 리스너 — 다른 태블릿에서 입력하면 자동 반영
+  // 실시간 리스너 — 다른 태블릿에서 새로 입력한 것만 반영
+  // once('value') 완료 후 등록해서 기존 데이터 중복 방지
+  const knownKeys = new Set(Object.keys(fbData||{}));
+
   logsRef.on('child_added', snap=>{
+    // 이미 로드한 키면 무시
+    if(knownKeys.has(snap.key)) return;
+    knownKeys.add(snap.key);
+
     const r = snap.val();
     if(!r || !r.studentId || !r.activity) return;
     const s = students.find(x=>x.id===r.studentId);
     if(!s) return;
 
     const logDate = new Date(r.date);
-    const already = allLogs.some(l=>
-      l.studentId===r.studentId &&
-      l.date.getTime()===logDate.getTime() &&
-      l.activity===r.activity
-    );
-    if(already) return;
-
     const log = {
       date: logDate,
       studentId: r.studentId,
@@ -2552,7 +2564,8 @@ function loadFromSheet(){
       activity: r.activity,
       category: r.category,
       points: Number(r.points)||0,
-      type: r.type||'activity'
+      type: r.type||'activity',
+      _fbKey: snap.key
     };
     if(r.weight) log.weight = r.weight;
     allLogs.push(log);
@@ -5997,6 +6010,49 @@ async function deleteCheckedLogs(){
   renderAdminActivityTable();
   renderStudents(); renderStats();
   alert(`✅ ${idxList.length}건 삭제 완료!`);
+}
+
+async function deduplicateLogs(){
+  if(!_fbDB){ alert('Firebase 연결이 필요해요!'); return; }
+  if(!confirm('중복 기록을 찾아서 삭제할까요?\n실제 기록은 유지되고 중복만 제거돼요!')) return;
+
+  updateSyncStatus('🧹 중복 정리 중...');
+
+  const snap = await _fbDB.ref('logs').once('value');
+  const fbData = snap.val();
+  if(!fbData){ alert('데이터가 없어요!'); return; }
+
+  const seen = new Map(); // key→fbKey
+  const toDelete = []; // 삭제할 fbKey 목록
+
+  Object.entries(fbData).forEach(([fbKey, r])=>{
+    if(!r.studentId || !r.activity) return;
+    // 중복 키: 학생+활동+날짜(분 단위)
+    const d = new Date(r.date);
+    const timeKey = `${r.studentId}_${r.activity}_${d.getFullYear()}-${d.getMonth()}-${d.getDate()}_${d.getHours()}_${d.getMinutes()}`;
+    if(seen.has(timeKey)){
+      toDelete.push(fbKey); // 중복 → 삭제 대상
+    } else {
+      seen.set(timeKey, fbKey); // 첫 번째 → 유지
+    }
+  });
+
+  if(toDelete.length===0){
+    updateSyncStatus('');
+    alert('✅ 중복 기록이 없어요! 깨끗해요 🌿');
+    return;
+  }
+
+  // Firebase에서 중복 삭제
+  for(const fbKey of toDelete){
+    await _fbDB.ref('logs/'+fbKey).remove().catch(()=>{});
+  }
+
+  updateSyncStatus('');
+  alert(`✅ 중복 ${toDelete.length}건 삭제 완료!\n실제 기록은 그대로 유지됐어요.`);
+
+  // 데이터 새로 불러오기
+  loadFromSheet();
 }
 
 function renderAdminResetInfo(){
