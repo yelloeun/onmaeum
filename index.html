@@ -1372,7 +1372,7 @@ function triggerPWAInstall(){
       <button onclick="openAdminModal()"
         style="background:#555;color:#fff;border:none;border-radius:999px;
         padding:8px 16px;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer">
-        🔐 관리자 모드
+        🥣 잔반 기록 수정
       </button>
     </div>
     <h2 style="margin:0 0 4px;font-size:24px">🥣 남남 튼튼 초록 빈 그릇 · 잔반 무게 기록</h2>
@@ -1774,15 +1774,29 @@ function triggerPWAInstall(){
         <p id="mSub">오늘은 어떤 따뜻한 마음을 기록할까요?</p>
       </div>
       <div style="margin-left:auto;display:flex;gap:8px;align-items:center">
-        <div class="live memo-btn" onclick="openMemoFromModal()" title="관찰 메모 작성">
-          <div class="lt">📝 관찰메모</div>
-          <div class="lv">기록하기</div>
-        </div>
         <div class="live">
           <div class="lt" id="mDateLabel">오늘 누적</div>
           <div class="lv"><span id="mLive">0</span><span style="font-size:14px;font-weight:700;margin-left:2px">점</span></div>
         </div>
       </div>
+    </div>
+
+    <!-- 관찰메모 큰 버튼 (모달 헤드 아래) -->
+    <div onclick="openMemoFromModal()" style="
+      display:flex;align-items:center;gap:14px;
+      background:linear-gradient(135deg,#E8F4FB,#D4EAF7);
+      border:2px solid #A8C8E0;border-radius:16px;
+      padding:14px 20px;margin:12px 0 4px;cursor:pointer;
+      transition:all .15s ease;
+      box-shadow:0 3px 10px rgba(74,144,200,.15);"
+      onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 6px 18px rgba(74,144,200,.25)'"
+      onmouseout="this.style.transform='';this.style.boxShadow='0 3px 10px rgba(74,144,200,.15)'">
+      <div style="font-size:36px;line-height:1;flex-shrink:0">📝</div>
+      <div style="flex:1">
+        <div style="font-size:15px;font-weight:900;color:#2A5F80;margin-bottom:2px">새롭게 발견한 것과 느낀점을 기록해요!</div>
+        <div style="font-size:12px;color:#5B8FA8;font-weight:600">글·사진·음성을 함께 남길 수 있어요</div>
+      </div>
+      <div style="font-size:22px;color:#5B8FA8;flex-shrink:0">→</div>
     </div>
 
     <div class="modal-body">
@@ -2102,29 +2116,13 @@ function triggerPWAInstall(){
 </div>
 <div class="fruit-modal-bg" id="adminModal" style="z-index:150">
   <div class="fruit-modal" style="width:min(860px,98vw);text-align:left;padding:20px 24px 16px">
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
-      <span style="font-size:26px">🔐</span>
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+      <span style="font-size:26px">🥣</span>
       <div>
-        <h3 style="margin:0;font-size:18px">관리자 모드</h3>
-        <p style="margin:0;font-size:12px;color:var(--ink-soft)">기록 수정 · 삭제 · 초기화</p>
+        <h3 style="margin:0;font-size:18px">잔반 기록 수정</h3>
+        <p style="margin:0;font-size:12px;color:var(--ink-soft)">잔반 무게 수정 · 삭제</p>
       </div>
       <button onclick="closeAdminModal()" style="margin-left:auto;background:none;border:none;font-size:22px;cursor:pointer;color:#aaa">✕</button>
-    </div>
-
-    <!-- 탭 -->
-    <div style="display:flex;gap:0;margin-bottom:14px;border-bottom:2px solid var(--line)">
-      <button id="adminTab-janban" onclick="switchAdminTab('janban')"
-        style="background:transparent;border:none;border-bottom:3px solid var(--accent);
-        padding:8px 16px;font-family:inherit;font-size:13px;font-weight:700;
-        cursor:pointer;color:var(--accent);margin-bottom:-2px">🥣 잔반 수정</button>
-      <button id="adminTab-activity" onclick="switchAdminTab('activity')"
-        style="background:transparent;border:none;border-bottom:3px solid transparent;
-        padding:8px 16px;font-family:inherit;font-size:13px;font-weight:700;
-        cursor:pointer;color:var(--ink-soft);margin-bottom:-2px">📋 활동 기록 삭제</button>
-      <button id="adminTab-reset" onclick="switchAdminTab('reset')"
-        style="background:transparent;border:none;border-bottom:3px solid transparent;
-        padding:8px 16px;font-family:inherit;font-size:13px;font-weight:700;
-        cursor:pointer;color:var(--ink-soft);margin-bottom:-2px">🔄 전체 초기화</button>
     </div>
 
     <!-- 잔반 수정 탭 -->
@@ -2154,83 +2152,7 @@ function triggerPWAInstall(){
       </div>
     </div>
 
-    <!-- 활동 기록 삭제 탭 -->
-    <div id="adminPanel-activity" style="display:none">
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap">
-        <select id="adminActFilter" onchange="renderAdminActivityTable()"
-          style="border:1.5px solid var(--line);border-radius:10px;padding:7px 12px;
-          font-family:inherit;font-size:13px;background:#fff;cursor:pointer">
-          <option value="all">전체 학생</option>
-        </select>
-        <span id="adminActInfo" style="font-size:12px;color:var(--ink-soft)"></span>
-        <button onclick="deleteCheckedLogs()"
-          style="margin-left:auto;background:#E94F33;color:#fff;border:none;border-radius:10px;
-          padding:7px 16px;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer">
-          🗑️ 선택 삭제
-        </button>
-      </div>
-      <div style="overflow:auto;max-height:380px;border:1.5px solid var(--line);border-radius:14px">
-        <table style="width:100%;border-collapse:collapse;font-size:13px">
-          <thead>
-            <tr style="background:#F0EDE5;position:sticky;top:0;z-index:2">
-              <th style="padding:9px 10px;text-align:center;border-bottom:2px solid var(--line);width:36px">
-                <input type="checkbox" id="actCheckAll" onclick="toggleAllActChecks(this)"
-                  style="width:16px;height:16px;accent-color:#E94F33;cursor:pointer">
-              </th>
-              <th style="padding:9px 10px;text-align:center;border-bottom:2px solid var(--line);font-size:11px;color:var(--ink-soft)">아이콘</th>
-              <th style="padding:9px 10px;text-align:left;border-bottom:2px solid var(--line);font-size:11px;color:var(--ink-soft)">이름</th>
-              <th style="padding:9px 10px;text-align:center;border-bottom:2px solid var(--line);font-size:11px;color:var(--ink-soft)">날짜/시간</th>
-              <th style="padding:9px 10px;text-align:left;border-bottom:2px solid var(--line);font-size:11px;color:var(--ink-soft)">활동명</th>
-              <th style="padding:9px 10px;text-align:center;border-bottom:2px solid var(--line);font-size:11px;color:var(--ink-soft)">점수</th>
-              <th style="padding:9px 10px;text-align:center;border-bottom:2px solid var(--line);font-size:11px;color:#E94F33;font-weight:800">삭제</th>
-            </tr>
-          </thead>
-          <tbody id="adminActTbody"></tbody>
-        </table>
-      </div>
-      <div style="display:flex;justify-content:flex-end;margin-top:10px">
-        <button onclick="closeAdminModal()"
-          style="background:#333;color:#fff;border:none;border-radius:12px;
-          padding:10px 28px;font-family:inherit;font-size:14px;font-weight:800;cursor:pointer">닫기</button>
-      </div>
-    </div>
-
-    <!-- 전체 초기화 탭 -->
-    <div id="adminPanel-reset" style="display:none;padding:20px 0">
-      <div style="background:#FFF5F5;border:1.5px solid #F5CCCC;border-radius:14px;padding:20px;margin-bottom:16px">
-        <div style="font-size:15px;font-weight:800;color:#C94A3F;margin-bottom:8px">⚠️ 전체 데이터 초기화</div>
-        <p style="font-size:13px;color:#555;line-height:1.6;margin:0 0 16px">
-          모든 학생의 점수, 활동 기록, 잔반 기록이 <b>완전히 삭제</b>됩니다.<br>
-          이 작업은 되돌릴 수 없어요!
-        </p>
-        <button onclick="resetAllData()"
-          style="background:#E94F33;color:#fff;border:none;border-radius:12px;
-          padding:12px 24px;font-family:inherit;font-size:14px;font-weight:800;cursor:pointer">
-          🔄 전체 초기화 실행
-        </button>
-      </div>
-      <div style="background:#F6F1E7;border:1.5px solid var(--line);border-radius:14px;padding:20px;margin-bottom:16px">
-        <div style="font-size:14px;font-weight:800;color:#555;margin-bottom:8px">🧹 중복 기록 정리</div>
-        <p style="font-size:13px;color:#666;line-height:1.6;margin:0 0 12px">
-          같은 학생·활동·시간이 중복 저장된 것을 자동으로 찾아서 삭제해요.<br>
-          <b>실제 기록은 유지되고 중복만 제거돼요!</b>
-        </p>
-        <button onclick="deduplicateLogs()"
-          style="background:#3D7A4A;color:#fff;border:none;border-radius:12px;
-          padding:12px 24px;font-family:inherit;font-size:14px;font-weight:800;cursor:pointer">
-          🧹 중복 기록 정리
-        </button>
-      </div>
-      <div style="background:#F6F1E7;border:1.5px solid var(--line);border-radius:14px;padding:20px;margin-bottom:16px">
-        <div style="font-size:14px;font-weight:800;color:#555;margin-bottom:8px">📊 현재 데이터 현황</div>
-        <div id="adminResetInfo" style="font-size:13px;color:#666;line-height:2"></div>
-      </div>
-      <div style="display:flex;justify-content:flex-end;margin-top:12px">
-        <button onclick="closeAdminModal()"
-          style="background:#333;color:#fff;border:none;border-radius:12px;
-          padding:10px 28px;font-family:inherit;font-size:14px;font-weight:800;cursor:pointer">닫기</button>
-      </div>
-    </div>
+    <!-- 활동 기록 삭제 / 전체 초기화는 메인 관리자 모달로 이동 -->
   </div>
 </div>
 
@@ -2238,10 +2160,10 @@ function triggerPWAInstall(){
 <div class="fruit-modal-bg" id="studentAdminModal" style="z-index:155">
   <div class="fruit-modal" style="width:min(780px,98vw);text-align:left;padding:20px 24px 16px">
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
-      <span style="font-size:26px">👤</span>
+      <span style="font-size:26px">🔐</span>
       <div>
-        <h3 style="margin:0;font-size:18px">유아카드 관리</h3>
-        <p style="margin:0;font-size:12px;color:var(--ink-soft)">전학 온 유아 추가 · 전학 간 유아 비활성화</p>
+        <h3 style="margin:0;font-size:18px">관리자</h3>
+        <p style="margin:0;font-size:12px;color:var(--ink-soft)">유아 관리 · 활동기록 삭제 · 전체 초기화</p>
       </div>
       <button onclick="closeStudentAdminModal()" style="margin-left:auto;background:none;border:none;font-size:22px;cursor:pointer;color:#aaa">✕</button>
     </div>
@@ -2255,7 +2177,15 @@ function triggerPWAInstall(){
       <button id="sAdminTabAdd" onclick="switchSAdminTab('add')"
         style="background:transparent;border:none;border-bottom:3px solid transparent;
         padding:8px 18px;font-family:inherit;font-size:13px;font-weight:700;
-        cursor:pointer;color:var(--ink-soft);margin-bottom:-2px">➕ 전학 온 유아 추가</button>
+        cursor:pointer;color:var(--ink-soft);margin-bottom:-2px">➕ 유아 추가</button>
+      <button id="sAdminTabActivity" onclick="switchSAdminTab('activity')"
+        style="background:transparent;border:none;border-bottom:3px solid transparent;
+        padding:8px 18px;font-family:inherit;font-size:13px;font-weight:700;
+        cursor:pointer;color:var(--ink-soft);margin-bottom:-2px">🗑️ 활동기록 삭제</button>
+      <button id="sAdminTabReset" onclick="switchSAdminTab('reset')"
+        style="background:transparent;border:none;border-bottom:3px solid transparent;
+        padding:8px 18px;font-family:inherit;font-size:13px;font-weight:700;
+        cursor:pointer;color:#C94A3F;margin-bottom:-2px">🔄 전체 초기화</button>
     </div>
 
     <!-- 목록 탭 -->
@@ -2326,6 +2256,84 @@ function triggerPWAInstall(){
         style="background:#333;color:#fff;border:none;border-radius:12px;
         padding:10px 28px;font-family:inherit;font-size:14px;font-weight:800;cursor:pointer">닫기</button>
     </div>
+
+    <!-- 활동 기록 삭제 패널 -->
+    <div id="sAdminPanelActivity" style="display:none">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap">
+        <select id="adminActFilter" onchange="renderAdminActivityTable()"
+          style="border:1.5px solid var(--line);border-radius:10px;padding:7px 12px;
+          font-family:inherit;font-size:13px;background:#fff;cursor:pointer">
+          <option value="all">전체 학생</option>
+        </select>
+        <span id="adminActInfo" style="font-size:12px;color:var(--ink-soft)"></span>
+        <button onclick="deleteCheckedLogs()"
+          style="margin-left:auto;background:#E94F33;color:#fff;border:none;border-radius:10px;
+          padding:7px 16px;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer">
+          🗑️ 선택 삭제
+        </button>
+      </div>
+      <div style="overflow:auto;max-height:380px;border:1.5px solid var(--line);border-radius:14px">
+        <table style="width:100%;border-collapse:collapse;font-size:13px">
+          <thead>
+            <tr style="background:#F0EDE5;position:sticky;top:0;z-index:2">
+              <th style="padding:9px 10px;text-align:center;border-bottom:2px solid var(--line);width:36px">
+                <input type="checkbox" id="actCheckAll" onclick="toggleAllActChecks(this)"
+                  style="width:16px;height:16px;accent-color:#E94F33;cursor:pointer">
+              </th>
+              <th style="padding:9px 10px;text-align:center;border-bottom:2px solid var(--line);font-size:11px;color:var(--ink-soft)">아이콘</th>
+              <th style="padding:9px 10px;text-align:left;border-bottom:2px solid var(--line);font-size:11px;color:var(--ink-soft)">이름</th>
+              <th style="padding:9px 10px;text-align:center;border-bottom:2px solid var(--line);font-size:11px;color:var(--ink-soft)">날짜/시간</th>
+              <th style="padding:9px 10px;text-align:left;border-bottom:2px solid var(--line);font-size:11px;color:var(--ink-soft)">활동명</th>
+              <th style="padding:9px 10px;text-align:center;border-bottom:2px solid var(--line);font-size:11px;color:var(--ink-soft)">점수</th>
+              <th style="padding:9px 10px;text-align:center;border-bottom:2px solid var(--line);font-size:11px;color:#E94F33;font-weight:800">삭제</th>
+            </tr>
+          </thead>
+          <tbody id="adminActTbody"></tbody>
+        </table>
+      </div>
+      <div style="display:flex;justify-content:flex-end;margin-top:10px">
+        <button onclick="closeStudentAdminModal()"
+          style="background:#333;color:#fff;border:none;border-radius:12px;
+          padding:10px 28px;font-family:inherit;font-size:14px;font-weight:800;cursor:pointer">닫기</button>
+      </div>
+    </div>
+
+    <!-- 전체 초기화 패널 -->
+    <div id="sAdminPanelReset" style="display:none;padding:20px 0">
+      <div style="background:#FFF5F5;border:1.5px solid #F5CCCC;border-radius:14px;padding:20px;margin-bottom:16px">
+        <div style="font-size:15px;font-weight:800;color:#C94A3F;margin-bottom:8px">⚠️ 전체 데이터 초기화</div>
+        <p style="font-size:13px;color:#555;line-height:1.6;margin:0 0 16px">
+          모든 학생의 점수, 활동 기록, 잔반 기록이 <b>완전히 삭제</b>됩니다.<br>
+          이 작업은 되돌릴 수 없어요!
+        </p>
+        <button onclick="resetAllData()"
+          style="background:#E94F33;color:#fff;border:none;border-radius:12px;
+          padding:12px 24px;font-family:inherit;font-size:14px;font-weight:800;cursor:pointer">
+          🔄 전체 초기화 실행
+        </button>
+      </div>
+      <div style="background:#F6F1E7;border:1.5px solid var(--line);border-radius:14px;padding:20px;margin-bottom:16px">
+        <div style="font-size:14px;font-weight:800;color:#555;margin-bottom:8px">🧹 중복 기록 정리</div>
+        <p style="font-size:13px;color:#666;line-height:1.6;margin:0 0 12px">
+          같은 학생·활동·시간이 중복 저장된 것을 자동으로 찾아서 삭제해요.<br>
+          <b>실제 기록은 유지되고 중복만 제거돼요!</b>
+        </p>
+        <button onclick="deduplicateLogs()"
+          style="background:#3D7A4A;color:#fff;border:none;border-radius:12px;
+          padding:12px 24px;font-family:inherit;font-size:14px;font-weight:800;cursor:pointer">
+          🧹 중복 기록 정리
+        </button>
+      </div>
+      <div style="background:#F6F1E7;border:1.5px solid var(--line);border-radius:14px;padding:20px;margin-bottom:16px">
+        <div style="font-size:14px;font-weight:800;color:#555;margin-bottom:8px">📊 현재 데이터 현황</div>
+        <div id="adminResetInfo" style="font-size:13px;color:#666;line-height:2"></div>
+      </div>
+      <div style="display:flex;justify-content:flex-end;margin-top:12px">
+        <button onclick="closeStudentAdminModal()"
+          style="background:#333;color:#fff;border:none;border-radius:12px;
+          padding:10px 28px;font-family:inherit;font-size:14px;font-weight:800;cursor:pointer">닫기</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -2392,9 +2400,9 @@ const modalItems = [
   { e:'🧹', ico:'🧹', t:'반짝반짝 학교가꿈이',      p:1, cat:'nature',
     q:'학교 주변에 떨어진 쓰레기를 주웠나요?',
     yes:'네! 깨끗한 학교를 위해 쓰레기를 주웠어요!', no:'다음엔 꼭 주울게요!' },
-  { e:'🪴', ico:'🪴', t:'새콤달콤 열매나무',         p:1, cat:'life',
-    q:'오늘 열매 나무에 물을 주었나요?',
-    yes:'물도 주고 열매도 관찰했어요!', no:'내일은 잘 돌봐줄게요~' },
+  { e:'🪴', ico:'🪴', t:'새콤달콤 열매나무·땅속 보물농장', p:1, cat:'life',
+    q:'오늘 열매 나무에 물을 주고, 텃밭과 논밭의 식물을 잘 가꿨나요?',
+    yes:'물도 주고 열매·채소가 자라는 걸 확인했어요!', no:'내일은 잘 돌봐줄게요~' },
   { e:'🧃', ico:'🧃', t:'헌 우유갑 새 휴지',        p:1, cat:'nature',
     q:'오늘 내가 마신 우유갑을 버리지 않고 모았나요?',
     yes:'네~ 다 마시고 깨끗하게 씻어서 말렸어요.', no:'모르고 버렸어요^^;;' },
@@ -2407,9 +2415,9 @@ const modalItems = [
   { e:'🎧', ico:'🎧', t:'소리산책',                 p:1, cat:'sound',
     q:'오음봉과 학교 주변에서 아름다운 소리를 감상했나요?',
     yes:'소리를 감상하고 녹음했어요! ^^', no:'내일은 소리산책을 해볼게요!' },
-  { e:'🌾', ico:'🌾', t:'땅 속 보물농장',            p:1, cat:'life',
-    q:'오늘 텃밭과 논밭의 식물을 잘 가꿨나요?',
-    yes:'물도 주고 채소가 자라는걸 확인했어요.', no:'내일은 잘 돌봐줄게요~' },
+  { e:'✏️', ico:'✏️', t:'관찰기록',                 p:3, cat:'heart',
+    q:'오늘 새롭게 발견하거나 느낀점을 남겨보았나요?',
+    yes:'새롭게 발견하고 느낀점을 기록했어요!', no:'아니요, 내일은 남겨볼게요' },
   { e:'🌲', ico:'🌲', t:'오음봉 숲 여행',            p:1, cat:'sound',
     q:'선생님과 오음봉에서 즐겁게 체험했나요?',
     yes:'숲이 주는 건강함을 느끼며 즐겁게 체험했어요.', no:'다음에는 즐겁게 참여할게요.' },
@@ -4952,6 +4960,7 @@ function renderActs(){
 
 /* ===== 활동 확인 팝업 ===== */
 let confirmItemIdx = null;
+let _pendingObservationIdx = null;
 // 활동별 1회 기록: { '민준_반짝반짝 학교가꿈이_2026-5-8': true }
 const actLog = {};
 const actLogKey = (studentId, actTitle) => {
@@ -5898,15 +5907,9 @@ function renderTeacherMemos(){
 
 /* ============ 관리자 탭 전환 + 활동 삭제 + 전체 초기화 ============ */
 function switchAdminTab(tab){
-  ['janban','activity','reset'].forEach(t=>{
-    const btn   = document.getElementById(`adminTab-${t}`);
-    const panel = document.getElementById(`adminPanel-${t}`);
-    const active = t===tab;
-    if(btn){ btn.style.borderBottomColor=active?'var(--accent)':'transparent'; btn.style.color=active?'var(--accent)':'var(--ink-soft)'; }
-    if(panel) panel.style.display = active?'block':'none';
-  });
-  if(tab==='activity') renderAdminActivityTable();
-  if(tab==='reset')    renderAdminResetInfo();
+  // 잔반 관리자 모달은 janban 탭만 존재
+  const panel = document.getElementById('adminPanel-janban');
+  if(panel) panel.style.display = 'block';
 }
 
 function renderAdminActivityTable(){
@@ -6249,19 +6252,33 @@ function closeStudentAdminModal(){
 }
 
 function switchSAdminTab(tab){
-  const tabList = document.getElementById('sAdminTabList');
-  const tabAdd  = document.getElementById('sAdminTabAdd');
-  const panList = document.getElementById('sAdminPanelList');
-  const panAdd  = document.getElementById('sAdminPanelAdd');
-  if(tab==='list'){
-    tabList.style.borderBottomColor='var(--accent)'; tabList.style.color='var(--accent)';
-    tabAdd.style.borderBottomColor='transparent';    tabAdd.style.color='var(--ink-soft)';
-    panList.style.display='block'; panAdd.style.display='none';
-    renderStudentAdminTbody();
-  } else {
-    tabAdd.style.borderBottomColor='var(--accent)';  tabAdd.style.color='var(--accent)';
-    tabList.style.borderBottomColor='transparent';   tabList.style.color='var(--ink-soft)';
-    panAdd.style.display='block'; panList.style.display='none';
+  const tabs = ['list','add','activity','reset'];
+  const accentColor = {'list':'var(--accent)','add':'var(--accent)','activity':'#E94F33','reset':'#C94A3F'};
+  tabs.forEach(t=>{
+    const btn = document.getElementById('sAdminTab'+t.charAt(0).toUpperCase()+t.slice(1));
+    const pan = document.getElementById('sAdminPanel'+t.charAt(0).toUpperCase()+t.slice(1));
+    if(btn){
+      btn.style.borderBottomColor = t===tab ? (accentColor[tab]||'var(--accent)') : 'transparent';
+      btn.style.color = t===tab ? (accentColor[tab]||'var(--accent)') : 'var(--ink-soft)';
+    }
+    if(pan) pan.style.display = t===tab ? 'block' : 'none';
+  });
+  if(tab==='list') renderStudentAdminTbody();
+  if(tab==='activity'){
+    renderAdminActivityTable();
+    // 학생 필터 옵션 채우기
+    const sel = document.getElementById('adminActFilter');
+    if(sel && sel.options.length===1){
+      students.forEach(s=>{ const o=document.createElement('option'); o.value=s.id; o.textContent=s.emoji+' '+s.id; sel.appendChild(o); });
+    }
+  }
+  if(tab==='reset'){
+    const info = document.getElementById('adminResetInfo');
+    if(info) info.innerHTML =
+      `활동 기록: <b>${allLogs.filter(l=>l.type==='activity').length}건</b><br>
+       잔반 기록: <b>${allLogs.filter(l=>l.type==='janban').length}건</b><br>
+       관찰 메모: <b>${memos.length}건</b><br>
+       총 학생: <b>${students.length}명</b>`;
   }
 }
 
