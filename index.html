@@ -1754,6 +1754,65 @@ function triggerPWAInstall(){
         </div>
       </div>
 
+      <!-- 인성검사 누계 패널 -->
+      <div class="tpanel" style="grid-column:1 / -1" id="teacherKediPanel">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;flex-wrap:wrap;gap:8px">
+          <h3 style="margin:0">💚 KEDI 인성검사 누계 <span style="color:var(--ink-soft);font-size:11px;font-weight:600">Character Education</span></h3>
+          <div style="display:flex;gap:6px">
+            <button onclick="switchKediTeacherView('bar')" id="kediViewBar"
+              style="background:var(--accent);color:#fff;border:none;border-radius:8px;
+              padding:5px 12px;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer">📊 영역별</button>
+            <button onclick="switchKediTeacherView('table')" id="kediViewTable"
+              style="background:#fff;border:1.5px solid var(--line);border-radius:8px;
+              padding:5px 12px;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;color:var(--ink-soft)">📋 상세표</button>
+          </div>
+        </div>
+        <p class="lead">4개 인성 영역 × 3회차 변화 추이 · 학생별 비교</p>
+
+        <!-- 제출 현황 요약 -->
+        <div id="kediTeacherStatus" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px"></div>
+
+        <!-- 영역별 뷰 -->
+        <div id="kediViewBarPanel">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+            <!-- 학급 전체 영역별 평균 (회차별) -->
+            <div>
+              <p class="lead" style="margin-bottom:8px">📊 학급 전체 영역별 평균 (회차별 비교)</p>
+              <canvas id="chartKediArea" height="220"></canvas>
+            </div>
+            <!-- 학생별 전체 평균 점수 -->
+            <div>
+              <p class="lead" style="margin-bottom:8px">👤 학생별 인성검사 평균 점수</p>
+              <canvas id="chartKediStudent" height="220"></canvas>
+            </div>
+          </div>
+          <!-- 4개 영역별 학생 비교 -->
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:16px" id="kediAreaCards"></div>
+        </div>
+
+        <!-- 상세표 뷰 -->
+        <div id="kediViewTablePanel" style="display:none">
+          <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;align-items:center">
+            <span style="font-size:12px;font-weight:800;color:var(--ink-soft)">학생 선택:</span>
+            <div id="kediTeacherPickRow" style="display:flex;gap:6px;flex-wrap:wrap"></div>
+          </div>
+          <div style="overflow-x:auto">
+            <table style="width:100%;border-collapse:collapse;font-size:12px" id="kediTeacherTable">
+              <thead>
+                <tr style="background:#F0EDE5">
+                  <th style="padding:8px 10px;text-align:left;border-bottom:2px solid var(--line);min-width:120px">문항 (영역·덕목)</th>
+                  <th style="padding:8px 10px;text-align:center;border-bottom:2px solid var(--line);color:#4A90D9">1회차<br><span style="font-size:10px;font-weight:400">5월 기초</span></th>
+                  <th style="padding:8px 10px;text-align:center;border-bottom:2px solid var(--line);color:var(--warm)">2회차<br><span style="font-size:10px;font-weight:400">8월 중간</span></th>
+                  <th style="padding:8px 10px;text-align:center;border-bottom:2px solid var(--line);color:var(--accent)">3회차<br><span style="font-size:10px;font-weight:400">10월 최종</span></th>
+                  <th style="padding:8px 10px;text-align:center;border-bottom:2px solid var(--line)">변화</th>
+                </tr>
+              </thead>
+              <tbody id="kediTeacherTbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
       <!-- 히트맵 -->
       <div class="tpanel" style="grid-column:1 / -1">
         <h3>🗓️ 14일 × 12명 활동 히트맵 <span style="color:var(--ink-soft);font-size:11px;font-weight:600">Activity Heatmap</span></h3>
@@ -6985,7 +7044,241 @@ function renderTeacher(){
   const sc = document.getElementById('tSoundCount');
   if(sc) sc.textContent = soundFiles.length + '건';
   renderSoundListFor('teacherSoundList', 'teacherAudio', null);
-  setTimeout(()=>{ drawSoundPie(); renderJanbanCharts(janbanLogs); generateTeacherComment(); }, 50);
+  setTimeout(()=>{ drawSoundPie(); renderJanbanCharts(janbanLogs); generateTeacherComment(); renderKediTeacher(); }, 50);
+}
+
+/* ====== 교사 분석 - 인성검사 누계 ====== */
+const KEDI_AREAS = ['자기인식 및 관리','협력적 소통','대인관계 및 공동체','윤리적 책임'];
+const KEDI_AREA_COLOR = ['#4A90D9','#E07A3C','#3D7A4A','#9B59B6'];
+let kediTeacherSelectedStudent = null;
+
+function switchKediTeacherView(mode){
+  const barPanel = document.getElementById('kediViewBarPanel');
+  const tablePanel = document.getElementById('kediViewTablePanel');
+  const btnBar = document.getElementById('kediViewBar');
+  const btnTable = document.getElementById('kediViewTable');
+  if(!barPanel) return;
+  if(mode==='bar'){
+    barPanel.style.display='block'; tablePanel.style.display='none';
+    btnBar.style.background='var(--accent)'; btnBar.style.color='#fff';
+    btnTable.style.background='#fff'; btnTable.style.color='var(--ink-soft)';
+  } else {
+    barPanel.style.display='none'; tablePanel.style.display='block';
+    btnTable.style.background='var(--accent)'; btnTable.style.color='#fff';
+    btnBar.style.background='#fff'; btnBar.style.color='var(--ink-soft)';
+    renderKediTeacherTable(kediTeacherSelectedStudent || (students[0]&&students[0].id));
+  }
+}
+
+function renderKediTeacher(){
+  if(typeof Chart === 'undefined') return;
+
+  // 제출 현황 요약
+  const statusEl = document.getElementById('kediTeacherStatus');
+  if(statusEl){
+    statusEl.innerHTML = students.map(s=>{
+      const r1 = kediData[`${s.id}_1`]?.submitted;
+      const r2 = kediData[`${s.id}_2`]?.submitted;
+      const r3 = kediData[`${s.id}_3`]?.submitted;
+      const cnt = [r1,r2,r3].filter(Boolean).length;
+      const bg = cnt===0?'#f0ece4':cnt===3?'#EEF6E8':'#FFF3E0';
+      const color = cnt===0?'#aaa':cnt===3?'var(--accent)':'var(--warm)';
+      return `<div style="background:${bg};border-radius:10px;padding:5px 10px;font-size:11px;font-weight:700;color:${color}">
+        ${s.emoji} ${s.id} <span style="opacity:.7">${cnt}/3회</span>
+      </div>`;
+    }).join('');
+  }
+
+  // 영역별 평균 계산 헬퍼
+  function areaAvg(studentId, round){
+    const d = kediData[`${studentId}_${round}`];
+    if(!d || !d.submitted) return null;
+    return KEDI_AREAS.map((area,ai)=>{
+      const qs = KEDI_QUESTIONS.map((q,i)=>({...q,i})).filter(q=>q.area===area);
+      const vals = qs.map(q=>d[`q${q.i}`]).filter(v=>v);
+      return vals.length ? vals.reduce((a,b)=>a+b,0)/vals.length : null;
+    });
+  }
+
+  // 학급 전체 영역별 평균 (회차별)
+  function classAreaAvg(round){
+    const sums = [0,0,0,0]; const cnts = [0,0,0,0];
+    students.forEach(s=>{
+      const arr = areaAvg(s.id, round);
+      if(!arr) return;
+      arr.forEach((v,i)=>{ if(v!==null){ sums[i]+=v; cnts[i]++; } });
+    });
+    return sums.map((s,i)=>cnts[i]>0 ? Math.round(s/cnts[i]*10)/10 : null);
+  }
+
+  const r1avg = classAreaAvg(1);
+  const r2avg = classAreaAvg(2);
+  const r3avg = classAreaAvg(3);
+
+  makeChart('chartKediArea',{
+    type:'bar',
+    data:{
+      labels: KEDI_AREAS.map(a=>a.replace(' 및 ','·')),
+      datasets:[
+        { label:'1회차(5월)', data:r1avg, backgroundColor:'#4A90D944', borderColor:'#4A90D9', borderWidth:2, borderRadius:4 },
+        { label:'2회차(8월)', data:r2avg, backgroundColor:'#E07A3C44', borderColor:'#E07A3C', borderWidth:2, borderRadius:4 },
+        { label:'3회차(10월)', data:r3avg, backgroundColor:'#3D7A4A44', borderColor:'#3D7A4A', borderWidth:2, borderRadius:4 },
+      ]
+    },
+    options:{ responsive:true,
+      scales:{ y:{ beginAtZero:true, max:5, title:{display:true,text:'평균 점수'} } },
+      plugins:{ legend:{position:'top',labels:{font:{size:11}}} }
+    }
+  });
+
+  // 학생별 전체 평균 (최신 회차 우선)
+  const studentAvgs = students.map(s=>{
+    for(let r=3;r>=1;r--){
+      const d=kediData[`${s.id}_${r}`];
+      if(d?.submitted){
+        const vals=KEDI_QUESTIONS.map((_,i)=>d[`q${i}`]).filter(v=>v);
+        return { id:s.id, emoji:s.emoji, avg: vals.length?Math.round(vals.reduce((a,b)=>a+b,0)/vals.length*10)/10:0, round:r };
+      }
+    }
+    return { id:s.id, emoji:s.emoji, avg:0, round:0 };
+  });
+
+  makeChart('chartKediStudent',{
+    type:'bar',
+    data:{
+      labels: studentAvgs.map(s=>`${s.emoji}${s.id}`),
+      datasets:[{
+        label:'인성검사 평균(최신)', data: studentAvgs.map(s=>s.avg),
+        backgroundColor: studentAvgs.map(s=>s.avg>=4?'#3D7A4A88':s.avg>=3?'#E07A3C88':'#E94F3388'),
+        borderColor:     studentAvgs.map(s=>s.avg>=4?'#3D7A4A':s.avg>=3?'#E07A3C':'#E94F33'),
+        borderWidth:2, borderRadius:6
+      }]
+    },
+    options:{ responsive:true,
+      scales:{ y:{ beginAtZero:true, max:5, title:{display:true,text:'평균 점수'} } },
+      plugins:{ legend:{display:false} }
+    }
+  });
+
+  // 4개 영역 카드
+  const cardsEl = document.getElementById('kediAreaCards');
+  if(cardsEl){
+    cardsEl.innerHTML = KEDI_AREAS.map((area,ai)=>{
+      const color = KEDI_AREA_COLOR[ai];
+      const qs = KEDI_QUESTIONS.map((q,i)=>({...q,i})).filter(q=>q.area===area);
+      // 각 덕목별 학급 평균 (최신 회차)
+      const virtueRows = qs.map(q=>{
+        let total=0, cnt=0;
+        students.forEach(s=>{
+          for(let r=3;r>=1;r--){
+            const d=kediData[`${s.id}_${r}`];
+            if(d?.submitted && d[`q${q.i}`]){ total+=d[`q${q.i}`]; cnt++; break; }
+          }
+        });
+        const avg = cnt>0?Math.round(total/cnt*10)/10:null;
+        const pct = avg ? (avg/5*100).toFixed(0) : 0;
+        return `<div style="margin-bottom:8px">
+          <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px">
+            <span style="font-weight:700">${q.virtue}</span>
+            <span style="color:${color};font-weight:800">${avg!==null?avg:'—'}</span>
+          </div>
+          <div style="background:#f0ece4;border-radius:6px;height:6px;overflow:hidden">
+            <div style="width:${pct}%;height:100%;background:${color};border-radius:6px;transition:width .8s"></div>
+          </div>
+        </div>`;
+      }).join('');
+      const submittedCnt = students.filter(s=>[1,2,3].some(r=>kediData[`${s.id}_${r}`]?.submitted)).length;
+      return `<div style="background:#fff;border:1.5px solid ${color}33;border-radius:14px;padding:14px">
+        <div style="font-size:13px;font-weight:900;color:${color};margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid ${color}22">${area}</div>
+        ${virtueRows}
+        <div style="font-size:10px;color:#aaa;margin-top:8px">${submittedCnt}명 응답 기준</div>
+      </div>`;
+    }).join('');
+  }
+
+  // 상세표 픽 버튼
+  const pickRow = document.getElementById('kediTeacherPickRow');
+  if(pickRow){
+    pickRow.innerHTML = students.map(s=>{
+      const hasDone = [1,2,3].some(r=>kediData[`${s.id}_${r}`]?.submitted);
+      const isSel = kediTeacherSelectedStudent===s.id;
+      return `<button onclick="selectKediTeacherStudent('${s.id}')"
+        style="background:${isSel?'var(--accent)':hasDone?'#EEF6E8':'#f0ece4'};
+        color:${isSel?'#fff':hasDone?'var(--accent)':'#aaa'};
+        border:1.5px solid ${isSel?'var(--accent)':hasDone?'var(--accent-2)':'var(--line)'};
+        border-radius:10px;padding:5px 10px;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer">
+        ${s.emoji} ${s.id}
+      </button>`;
+    }).join('');
+  }
+}
+
+function selectKediTeacherStudent(id){
+  kediTeacherSelectedStudent = id;
+  renderKediTeacherTable(id);
+  // 픽 버튼 갱신
+  const pickRow = document.getElementById('kediTeacherPickRow');
+  if(pickRow) pickRow.querySelectorAll('button').forEach((btn,i)=>{
+    const sid = students[i]?.id;
+    const hasDone = sid && [1,2,3].some(r=>kediData[`${sid}_${r}`]?.submitted);
+    const isSel = sid===id;
+    btn.style.background = isSel?'var(--accent)':hasDone?'#EEF6E8':'#f0ece4';
+    btn.style.color = isSel?'#fff':hasDone?'var(--accent)':'#aaa';
+    btn.style.borderColor = isSel?'var(--accent)':hasDone?'var(--accent-2)':'var(--line)';
+  });
+}
+
+function renderKediTeacherTable(id){
+  const tbody = document.getElementById('kediTeacherTbody');
+  if(!tbody || !id) return;
+  const d1=kediData[`${id}_1`], d2=kediData[`${id}_2`], d3=kediData[`${id}_3`];
+  const s=students.find(x=>x.id===id);
+  if(!d1&&!d2&&!d3){
+    tbody.innerHTML=`<tr><td colspan="5" style="text-align:center;padding:24px;color:#aaa">${s?.emoji||''} ${id} — 아직 제출된 인성검사가 없어요</td></tr>`;
+    return;
+  }
+  // 영역별 소계 행도 추가
+  let html='';
+  let prevArea='';
+  KEDI_QUESTIONS.forEach((q,i)=>{
+    if(q.area!==prevArea){
+      prevArea=q.area;
+      // 영역 소계
+      const aqs=KEDI_QUESTIONS.map((qq,ii)=>({...qq,ii})).filter(qq=>qq.area===q.area);
+      const aAvg=(r,d)=>{
+        if(!d?.submitted) return null;
+        const vs=aqs.map(qq=>d[`q${qq.ii}`]).filter(v=>v);
+        return vs.length?Math.round(vs.reduce((a,b)=>a+b,0)/vs.length*10)/10:null;
+      };
+      const ai=KEDI_AREAS.indexOf(q.area);
+      const color=KEDI_AREA_COLOR[ai]||'#888';
+      html+=`<tr style="background:${color}11">
+        <td colspan="5" style="padding:7px 10px;font-size:12px;font-weight:900;color:${color};border-top:2px solid ${color}33">
+          ${q.area}
+          <span style="font-weight:400;font-size:11px;margin-left:8px;color:${color}99">
+            1회:${aAvg(1,d1)??'—'} / 2회:${aAvg(2,d2)??'—'} / 3회:${aAvg(3,d3)??'—'}
+          </span>
+        </td></tr>`;
+    }
+    const v1=d1?.submitted?d1[`q${i}`]:null;
+    const v2=d2?.submitted?d2[`q${i}`]:null;
+    const v3=d3?.submitted?d3[`q${i}`]:null;
+    let change='-';
+    if(v1!==null&&v3!==null){ const d=v3-v1; change=d>0?`<span style="color:var(--accent)">▲+${d}</span>`:d<0?`<span style="color:#E94F33">▼${d}</span>`:`<span style="color:#aaa">━</span>`; }
+    else if(v1!==null&&v2!==null){ const d=v2-v1; change=d>0?`<span style="color:var(--accent)">▲+${d}</span>`:d<0?`<span style="color:#E94F33">▼${d}</span>`:`<span style="color:#aaa">━</span>`; }
+    const bg=(i%2===0)?'#fff':'#FAFAF6';
+    html+=`<tr style="background:${bg}">
+      <td style="padding:7px 10px;border-bottom:1px solid #f0ece4;font-size:11px;line-height:1.5">
+        <span style="font-weight:700;color:#666">${q.virtue}</span><br>
+        <span style="color:#999">${q.text.length>36?q.text.slice(0,36)+'…':q.text}</span>
+      </td>
+      <td style="padding:7px 10px;text-align:center;border-bottom:1px solid #f0ece4;font-weight:700;color:#4A90D9">${v1??'—'}</td>
+      <td style="padding:7px 10px;text-align:center;border-bottom:1px solid #f0ece4;font-weight:700;color:var(--warm)">${v2??'—'}</td>
+      <td style="padding:7px 10px;text-align:center;border-bottom:1px solid #f0ece4;font-weight:700;color:var(--accent)">${v3??'—'}</td>
+      <td style="padding:7px 10px;text-align:center;border-bottom:1px solid #f0ece4;font-weight:700">${change}</td>
+    </tr>`;
+  });
+  tbody.innerHTML=html;
 }
 
 /* ====== 잔반 차트 ====== */
