@@ -2667,6 +2667,12 @@ function loadFromSheet(){
     return;
   }
 
+  // kedi 데이터 먼저 불러오기 (Firebase 있을 때)
+  _fbDB.ref('kedi').once('value').then(kSnap=>{
+    const kData = kSnap.val();
+    if(kData) Object.entries(kData).forEach(([k,v])=>{ kediData[k]=v; });
+  }).catch(()=>{});
+
   const logsRef = _fbDB.ref('logs');
   logsRef.once('value').then(snap=>{
     const fbData = snap.val();
@@ -2710,6 +2716,15 @@ function loadFromSheet(){
     renderStudents(); renderStats();
     updateSyncStatus(`✅ ${Object.keys(fbData).length}건 동기화 완료`);
     setTimeout(()=>updateSyncStatus(''), 3000);
+
+    // 인성검사 데이터도 불러오기
+    _fbDB.ref('kedi').once('value').then(kSnap=>{
+      const kData = kSnap.val();
+      if(kData){
+        Object.entries(kData).forEach(([k,v])=>{ kediData[k]=v; });
+        console.log(`💚 인성검사 ${Object.keys(kData).length}건 불러옴`);
+      }
+    }).catch(()=>{});
 
   }).catch(()=>{
     loadLogsFromDB().then(()=>{ updateSyncStatus(''); });
@@ -4671,6 +4686,12 @@ function submitKedi(id, round){
   if(!allDone){ alert('모든 문항에 답해주세요!'); return; }
   answers.submitted = true;
   kediData[key] = answers;
+
+  // Firebase에 저장
+  if(typeof _fbDB !== 'undefined' && _fbDB){
+    _fbDB.ref(`kedi/${key}`).set(answers).catch(e=>console.warn('kedi save error:', e));
+  }
+
   playPop();
   renderKediPick();
   renderKediForm();
