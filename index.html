@@ -4668,10 +4668,21 @@ function renderKediForm(){
             </label>`).join('')}
         </div>
       </div>`).join('')}
-    ${saved.submitted?
-      `<div style="text-align:center;padding:20px;background:#EEF6E8;border-radius:14px;color:var(--accent);font-weight:800;margin-top:10px">✅ ${roundNames[kediRound]} 검사가 이미 제출되었어요!</div>`:
-      `<button class="kedi-submit-btn" onclick="submitKedi('${kediStudent}',${kediRound})">💚 검사 제출하기</button>`
-    }`;
+      `<div style="text-align:center;padding:16px 20px;background:#EEF6E8;border-radius:14px;margin-top:10px;display:flex;align-items:center;justify-content:center;gap:14px;flex-wrap:wrap"><span style="color:var(--accent);font-weight:800">✅ ${roundNames[kediRound]} 검사가 제출되었어요!</span><button onclick="editKedi('${kediStudent}',${kediRound})" style="background:#fff;border:2px solid var(--accent);border-radius:10px;padding:7px 16px;font-family:inherit;font-size:13px;font-weight:800;color:var(--accent);cursor:pointer">✏️ 수정하기</button></div>`
+      :
+      \`<button class="kedi-submit-btn" onclick="submitKedi('${kediStudent}',${kediRound})">💚 검사 제출하기</button>\`
+    }\`;
+}
+
+function editKedi(id, round){
+  if(!confirm(`${id}의 ${round}회차 인성검사를 수정하시겠어요?\n기존 답변은 유지되고 다시 제출할 수 있어요.`)) return;
+  const key = `${id}_${round}`;
+  if(kediData[key]) kediData[key].submitted = false;
+  // Firebase에도 submitted 해제
+  if(typeof _fbDB !== 'undefined' && _fbDB){
+    _fbDB.ref(`kedi/${key}/submitted`).set(false).catch(()=>{});
+  }
+  renderKediForm();
 }
 
 function submitKedi(id, round){
