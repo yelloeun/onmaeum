@@ -4854,6 +4854,12 @@ function renderKediForm(){
   const key = `${kediStudent}_${kediRound}`;
   const saved = kediData[key] || {};
   const roundNames = ['','5월 기초 진단','8월 형성 평가','10월 최종 검증'];
+
+  // 이전 회차 데이터 (힌트용)
+  const prevRound = kediRound > 1 ? kediRound - 1 : null;
+  const prevData  = prevRound ? (kediData[`${kediStudent}_${prevRound}`] || {}) : {};
+  const prevLabel = prevRound ? `${prevRound}회차(${['','5월','8월','10월'][prevRound]})` : '';
+
   el.innerHTML = `
     <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px;padding-bottom:14px;border-bottom:1px solid var(--line)">
       <span style="font-size:36px">${s.emoji}</span>
@@ -4867,18 +4873,28 @@ function renderKediForm(){
       각 문항을 읽고 자신과 가장 가깝다고 생각되는 번호를 선택하세요.<br>
       <span style="font-size:11px">① 매우 아니다 &nbsp;② 아니다&nbsp;③ 보통이다 &nbsp;④ 그렇다 &nbsp;⑤ 매우 그렇다</span>
     </div>
-    ${KEDI_QUESTIONS.map((q,i)=>`
+    ${prevRound && prevData.submitted ? `
+    <div style="background:#FFF8EC;border:1.5px solid #F5D9A0;border-radius:12px;padding:10px 14px;margin-bottom:16px;font-size:12px;color:#8A6A20;font-weight:700;display:flex;align-items:center;gap:8px">
+      <span style="font-size:16px">💡</span>
+      <span>${prevLabel} 답변이 각 번호 아래에 흐릿하게 표시돼요. 참고해서 답해봐요!</span>
+    </div>` : ''}
+    ${KEDI_QUESTIONS.map((q,i)=>{
+      const prevVal = prevData[`q${i}`] || null;
+      return `
       <div class="kedi-q">
         <div class="kedi-q-area">${q.area} · ${q.virtue}</div>
         <div class="kedi-q-text">${i+1}. ${q.text}</div>
         <div class="kedi-scale">
           ${[1,2,3,4,5].map(v=>`
-            <label>
+            <label style="position:relative">
               <input type="radio" name="kq_${key}_${i}" value="${v}" ${saved[`q${i}`]===v?'checked':''}>
               <span>${v}</span>
+              ${prevVal===v ? `<div style="position:absolute;bottom:-16px;left:50%;transform:translateX(-50%);font-size:9px;font-weight:900;color:#C49A30;opacity:.7;white-space:nowrap">◀이전</div>` : ''}
             </label>`).join('')}
         </div>
-      </div>`).join('')}
+        ${prevVal ? `<div style="font-size:10px;color:#C49A30;opacity:.6;margin-top:18px;text-align:right">${prevLabel}: ${prevVal}점 선택했었어요</div>` : ''}
+      </div>`;
+    }).join('')}
     ${saved.submitted?
       `<div style="text-align:center;padding:16px 20px;background:#EEF6E8;border-radius:14px;margin-top:10px;display:flex;align-items:center;justify-content:center;gap:14px;flex-wrap:wrap"><span style="color:var(--accent);font-weight:800">✅ ${roundNames[kediRound]} 검사가 제출되었어요!</span><button onclick="editKedi('${kediStudent}',${kediRound})" style="background:#fff;border:2px solid var(--accent);border-radius:10px;padding:7px 16px;font-family:inherit;font-size:13px;font-weight:800;color:var(--accent);cursor:pointer">✏️ 수정하기</button></div>`
       :
