@@ -2604,6 +2604,31 @@ const allLogs = [];
 // ============ 구글 시트 연동 ============
 const GS_URL = 'https://script.google.com/macros/s/AKfycbwk9iB2M3YMFdG8AJgfJ6ctKCldENAEcrKY8bm_nLAItOtssYmtaNqZxFSfVdYLRUJmdw/exec';
 
+/* ====== Cloudinary 설정 ====== */
+const CLD_CLOUD = 'dukzrwvx6';
+const CLD_PRESET = 'onmaeum_upload'; // unsigned preset (아래 설명 참고)
+const CLD_API_KEY = '822591847737575';
+const CLD_UPLOAD_URL = `https://api.cloudinary.com/v1_1/${CLD_CLOUD}/auto/upload`;
+
+async function uploadToCloudinary(dataUrlOrBlob, folder='memos'){
+  const fd = new FormData();
+  if(typeof dataUrlOrBlob === 'string'){
+    // base64 dataURL → Blob 변환
+    const res = await fetch(dataUrlOrBlob);
+    const blob = await res.blob();
+    fd.append('file', blob);
+  } else {
+    fd.append('file', dataUrlOrBlob);
+  }
+  fd.append('upload_preset', CLD_PRESET);
+  fd.append('folder', folder);
+  fd.append('api_key', CLD_API_KEY);
+  const resp = await fetch(CLD_UPLOAD_URL, { method:'POST', body:fd });
+  const data = await resp.json();
+  if(data.secure_url) return data.secure_url;
+  throw new Error(data.error?.message || 'Cloudinary 업로드 실패');
+}
+
 /* ============================================================
    Firebase 실시간 동기화
    - 와이파이 있으면 실시간으로 3대 태블릿 동기화
@@ -2722,6 +2747,27 @@ function loadFromSheet(){
       if(kData){
         Object.entries(kData).forEach(([k,v])=>{ kediData[k]=v; });
         console.log(`💚 인성검사 ${Object.keys(kData).length}건 불러옴`);
+      }
+    }).catch(()=>{});
+
+    // 관찰메모 불러오기
+    _fbDB.ref('memos').once('value').then(mSnap=>{
+      const mData = mSnap.val();
+      if(mData){
+        const loaded = Object.entries(mData).map(([k,v])=>({
+          fbKey: k,
+          studentId: v.studentId,
+          text: v.text||'',
+          photos: v.photos||[],
+          audio: v.audio||[],
+          date: new Date(v.ts||Date.now())
+        }));
+        // 중복 제거 후 병합
+        const existingKeys = new Set(memos.map(m=>m.fbKey).filter(Boolean));
+        loaded.forEach(m=>{ if(!existingKeys.has(m.fbKey)) memos.push(m); });
+        memos.sort((a,b)=>a.date-b.date);
+        console.log(`📝 관찰메모 ${loaded.length}건 불러옴`);
+        renderTeacherMemos();
       }
     }).catch(()=>{});
 
@@ -5785,6 +5831,11 @@ function openMemoFromModal(){
 function deleteMemo(idx, from, studentId){
   if(!confirm('이 관찰 메모를 삭제할까요?')) return;
   if(idx < 0 || idx >= memos.length) return;
+  const m = memos[idx];
+  // Firebase에서도 삭제
+  if(m.fbKey && typeof _fbDB !== 'undefined' && _fbDB){
+    _fbDB.ref(`memos/${m.fbKey}`).remove().catch(()=>{});
+  }
   memos.splice(idx, 1);
   if(from === 'detail' && studentId){
     renderDetailMemo(studentId);
@@ -6028,41 +6079,71 @@ function removeMemoPhoto(i){
   previewMemoPhotos({files: memoPhotoFiles});
 }
 
-function saveMemo(){
+async function saveMemo(){
   const text = (document.getElementById('memoText').value||'').trim();
   if(!memoTargetStudent){ alert('학생을 선택해주세요!'); return; }
 
-  // 갤러리 사진 + 카메라 직접 촬영 사진 합치기
   const camPhotos = _cameraPhotos.filter(Boolean);
   if(!text && memoPhotoFiles.length===0 && camPhotos.length===0 && memoAudioFiles.length===0){
     alert('글, 사진, 음성 중 하나라도 입력해주세요!'); return;
   }
 
-  const photoPromises = memoPhotoFiles.map(f=>new Promise(res=>{
-    const r = new FileReader();
-    r.onload = e=>res(e.target.result);
-    r.readAsDataURL(f);
-  }));
+  // 저장 중 표시
+  const saveBtn = document.querySelector('#memoModal .memo-save-btn') ||
+                  document.querySelector('[onclick="saveMemo()"]');
+  if(saveBtn){ saveBtn.disabled=true; saveBtn.textContent='저장 중... ☁️'; }
 
-  Promise.all(photoPromises).then(galleryPhotos=>{
-    const allPhotos = [...camPhotos, ...galleryPhotos];
-    const audioData = memoAudioFiles.map(a=>({url:a.url, name:a.name}));
-    memos.push({studentId:memoTargetStudent, text, photos:allPhotos, audio:audioData, date:new Date()});
-    // Firebase에도 저장 (사진/음성 제외 텍스트+날짜만)
+  try {
+    const folder = `memos/${memoTargetStudent}`;
+
+    // 갤러리 사진 → Cloudinary
+    const galleryUrls = await Promise.all(memoPhotoFiles.map(async f=>{
+      const r = await new Promise(res=>{ const fr=new FileReader(); fr.onload=e=>res(e.target.result); fr.readAsDataURL(f); });
+      return uploadToCloudinary(r, folder).catch(()=>r); // 실패시 로컬 base64 유지
+    }));
+
+    // 카메라 사진 → Cloudinary
+    const camUrls = await Promise.all(camPhotos.map(dp=>
+      uploadToCloudinary(dp, folder).catch(()=>dp)
+    ));
+
+    // 음성 → Cloudinary
+    const audioUrls = await Promise.all(memoAudioFiles.map(async a=>{
+      const url = await uploadToCloudinary(a.blob, folder).catch(()=>null);
+      return url ? {url, name:a.name} : {url:a.url, name:a.name};
+    }));
+
+    const allPhotos = [...camUrls, ...galleryUrls];
+    const now = new Date();
+
+    // Firebase에 전체 저장 (URL 포함)
+    let fbKey = null;
     if(typeof _fbDB !== 'undefined' && _fbDB){
-      _fbDB.ref('memos').push({
-        studentId:memoTargetStudent, text,
-        hasPhoto: allPhotos.length>0,
-        hasAudio: audioData.length>0,
-        ts: Date.now()
-      }).catch(()=>{});
+      const ref = await _fbDB.ref('memos').push({
+        studentId: memoTargetStudent,
+        text,
+        photos: allPhotos,
+        audio: audioUrls,
+        ts: now.getTime()
+      });
+      fbKey = ref.key;
     }
+
+    // 로컬 메모리에도 저장
+    memos.push({studentId:memoTargetStudent, text, photos:allPhotos, audio:audioUrls, date:now, fbKey});
+
     closeMemoModal();
     renderStatsMemoPanel(memoTargetStudent);
     renderDetailMemo(memoTargetStudent);
     renderTeacherMemos();
     alert(`✅ ${memoTargetStudent} 관찰 메모가 저장됐어요!`);
-  });
+
+  } catch(e){
+    console.error('saveMemo error:', e);
+    alert('저장 중 오류가 발생했어요. 다시 시도해주세요.');
+  } finally {
+    if(saveBtn){ saveBtn.disabled=false; saveBtn.textContent='💾 저장하기'; }
+  }
 }
 
 function renderStatsMemoPanel(sid){
