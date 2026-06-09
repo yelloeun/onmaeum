@@ -3090,24 +3090,61 @@ function goto(name){
 
 function initObserveScreen(){
   renderObservePick();
-  // Firebase에서 항상 최신 관찰기록 불러오기
+  // Firebase에서 항상 최신 관찰기록 불러오기 (observations + memos 합치기)
   if(typeof _fbDB!=='undefined' && _fbDB){
-    _fbDB.ref('observations').once('value').then(snap=>{
+    observationLogs.length=0;
+
+    const p1 = _fbDB.ref('observations').once('value').then(snap=>{
       const data=snap.val();
-      observationLogs.length=0; // 기존 초기화 후 새로 채우기
       if(data){
         Object.entries(data).forEach(([k,v])=>{
           observationLogs.push({
-            fbKey:k, studentId:v.studentId, discover:v.discover||'',
+            fbKey:k, source:'observations',
+            studentId:v.studentId, discover:v.discover||'',
             feeling:v.feeling||'', photos:v.photos||[], audio:v.audio||[],
             date:new Date(v.ts||Date.now())
           });
         });
-        observationLogs.sort((a,b)=>a.date-b.date);
       }
+    }).catch(()=>{});
+
+    const p2 = _fbDB.ref('memos').once('value').then(snap=>{
+      const data=snap.val();
+      if(data){
+        Object.entries(data).forEach(([k,v])=>{
+          // memos를 관찰기록 형식으로 변환
+          observationLogs.push({
+            fbKey:k, source:'memos',
+            studentId:v.studentId,
+            discover: v.text||'',  // 텍스트를 발견한 것으로
+            feeling:'',
+            photos:v.photos||[], audio:v.audio||[],
+            date:new Date(v.ts||Date.now())
+          });
+        });
+      }
+    }).catch(()=>{});
+
+    Promise.all([p1,p2]).then(()=>{
+      observationLogs.sort((a,b)=>a.date-b.date);
       renderObserveList();
-    }).catch(()=>{ renderObserveList(); });
+    });
   } else {
+    // Firebase 없으면 로컬 memos도 합치기
+    const combined = [...observationLogs];
+    memos.forEach(m=>{
+      if(!combined.find(o=>o.fbKey&&o.source==='memos'&&o.studentId===m.studentId&&o.date-m.date===0)){
+        combined.push({
+          source:'memos', studentId:m.studentId,
+          discover:m.text||'', feeling:'',
+          photos:m.photos||[], audio:m.audio||[],
+          date:m.date
+        });
+      }
+    });
+    combined.sort((a,b)=>a.date-b.date);
+    observationLogs.length=0;
+    combined.forEach(c=>observationLogs.push(c));
     renderObserveList();
   }
 }
@@ -5189,7 +5226,7 @@ function renderObserveList(){
         <b style="font-size:13px">${m.studentId}</b>
         <span style="margin-left:auto;font-size:11px;color:var(--ink-soft)">${ds}</span>
       </div>
-      ${m.discover?`<div style="font-size:12px;font-weight:800;color:#4A90D9;margin-bottom:3px">🔍 발견한 것</div><div style="font-size:13px;line-height:1.6;margin-bottom:8px;white-space:pre-wrap">${m.discover}</div>`:''}
+      ${m.discover?`<div style="font-size:12px;font-weight:800;color:#4A90D9;margin-bottom:3px">${m.source==='memos'?'📝 관찰 내용':'🔍 발견한 것'}</div><div style="font-size:13px;line-height:1.6;margin-bottom:8px;white-space:pre-wrap">${m.discover}</div>`:''}
       ${m.feeling?`<div style="font-size:12px;font-weight:800;color:var(--warm);margin-bottom:3px">💭 느낌&소감</div><div style="font-size:13px;line-height:1.6;margin-bottom:8px;white-space:pre-wrap">${m.feeling}</div>`:''}
       ${m.photos&&m.photos.length?`<div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:6px">
         ${m.photos.map(p=>`<img src="${p}" style="width:72px;height:72px;object-fit:cover;border-radius:8px;cursor:pointer;border:1.5px solid var(--line)" onclick="viewMemoPhoto('${p}')">`).join('')}
