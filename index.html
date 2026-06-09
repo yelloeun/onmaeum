@@ -3090,24 +3090,23 @@ function goto(name){
 
 function initObserveScreen(){
   renderObservePick();
-  // Firebase에서 관찰기록 불러오기 (첫 진입 시)
-  if(observationLogs.length===0 && typeof _fbDB!=='undefined' && _fbDB){
+  // Firebase에서 항상 최신 관찰기록 불러오기
+  if(typeof _fbDB!=='undefined' && _fbDB){
     _fbDB.ref('observations').once('value').then(snap=>{
       const data=snap.val();
+      observationLogs.length=0; // 기존 초기화 후 새로 채우기
       if(data){
         Object.entries(data).forEach(([k,v])=>{
-          if(!observationLogs.find(o=>o.fbKey===k)){
-            observationLogs.push({
-              fbKey:k, studentId:v.studentId, discover:v.discover||'',
-              feeling:v.feeling||'', photos:v.photos||[], audio:v.audio||[],
-              date:new Date(v.ts||Date.now())
-            });
-          }
+          observationLogs.push({
+            fbKey:k, studentId:v.studentId, discover:v.discover||'',
+            feeling:v.feeling||'', photos:v.photos||[], audio:v.audio||[],
+            date:new Date(v.ts||Date.now())
+          });
         });
         observationLogs.sort((a,b)=>a.date-b.date);
       }
       renderObserveList();
-    }).catch(()=>{});
+    }).catch(()=>{ renderObserveList(); });
   } else {
     renderObserveList();
   }
