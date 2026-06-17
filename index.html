@@ -2803,6 +2803,8 @@ function loadFromSheet(){
     if(kData) Object.entries(kData).forEach(([k,v])=>{ kediData[k]=v; });
   }).catch(()=>{});
 
+  const knownKeys = new Set();
+
   const logsRef = _fbDB.ref('logs');
   logsRef.once('value').then(snap=>{
     const fbData = snap.val();
@@ -2883,7 +2885,6 @@ function loadFromSheet(){
 
   // 실시간 리스너 — 다른 태블릿에서 새로 입력한 것만 반영
   // once('value') 완료 후 등록해서 기존 데이터 중복 방지
-  const knownKeys = new Set(Object.keys(fbData||{}));
 
   logsRef.on('child_added', snap=>{
     // 이미 로드한 키면 무시
