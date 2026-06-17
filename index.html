@@ -6189,19 +6189,22 @@ function openMemoFromModal(){
   document.getElementById('memoModal').classList.add('show');
 }
 
-function deleteMemo(idx, from, studentId){
+function deleteMemo(fbKey, from, studentId){
   if(!confirm('이 관찰 메모를 삭제할까요?')) return;
-  if(idx < 0 || idx >= memos.length) return;
+
+  // memos에서 fbKey로 찾기
+  const idx = memos.findIndex(m=>m.fbKey===fbKey);
+  if(idx === -1) return;
   const m = memos[idx];
 
-  // Firebase에서도 삭제 (source에 따라 경로 다름)
-  if(m.fbKey && typeof _fbDB !== 'undefined' && _fbDB){
-    const path = m.source==='observations' ? `observations/${m.fbKey}` : `memos/${m.fbKey}`;
+  // Firebase에서 삭제 (source에 따라 경로 다름)
+  if(fbKey && typeof _fbDB !== 'undefined' && _fbDB){
+    const path = m.source==='observations' ? `observations/${fbKey}` : `memos/${fbKey}`;
     _fbDB.ref(path).remove().catch(()=>{});
   }
 
   // observationLogs에서도 제거
-  const obsIdx = observationLogs.findIndex(o=>o.fbKey===m.fbKey);
+  const obsIdx = observationLogs.findIndex(o=>o.fbKey===fbKey);
   if(obsIdx !== -1) observationLogs.splice(obsIdx, 1);
 
   memos.splice(idx, 1);
@@ -6223,13 +6226,13 @@ function renderDetailMemo(id){
     return;
   }
   el.innerHTML = [...sm].reverse().map((m,ri)=>{
-    const realIdx = memos.lastIndexOf(sm[sm.length-1-ri]); // 실제 memos 인덱스
+    const memoFbKey = (sm[sm.length-1-ri]||{}).fbKey || ''; // 실제 memos 인덱스
     const d=m.date;
     const ds=`${d.getMonth()+1}/${d.getDate()} ${d.getHours()}:${String(d.getMinutes()).padStart(2,'0')}`;
     return `<div style="border-bottom:1px dashed var(--line);padding:10px 0;position:relative">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
         <div style="font-size:11px;color:var(--ink-soft)">${ds}</div>
-        <button onclick="deleteMemo(${realIdx},'detail','${id}')"
+        <button onclick="deleteMemo('${memoFbKey}','detail','${id}')"
           style="background:none;border:none;cursor:pointer;font-size:15px;color:#ccc;padding:2px 4px;line-height:1"
           onmouseover="this.style.color='#E94F33'" onmouseout="this.style.color='#ccc'">🗑️</button>
       </div>
@@ -6762,7 +6765,7 @@ function renderTeacherMemos(){
   const sorted = [...filtered].sort((a,b)=>b.date-a.date);
   el.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px">
     ${sorted.map(m=>{
-      const idx = memos.indexOf(m);
+      const fbKey = m.fbKey || '';
       const s = students.find(x=>x.id===m.studentId);
       const d=m.date;
       const ds=`${d.getMonth()+1}/${d.getDate()} ${d.getHours()}:${String(d.getMinutes()).padStart(2,'0')}`;
@@ -6771,7 +6774,7 @@ function renderTeacherMemos(){
           <span style="font-size:18px">${s?s.emoji:'👤'}</span>
           <b style="font-size:13px">${m.studentId}</b>
           <span style="margin-left:auto;font-size:11px;color:var(--ink-soft)">${ds}</span>
-          <button onclick="deleteMemo(${idx},'teacher',null)"
+          <button onclick="deleteMemo('${fbKey}','teacher',null)"
             style="background:none;border:none;cursor:pointer;font-size:15px;color:#ccc;padding:2px 4px;line-height:1;flex-shrink:0"
             onmouseover="this.style.color='#E94F33'" onmouseout="this.style.color='#ccc'">🗑️</button>
         </div>
