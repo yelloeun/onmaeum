@@ -6193,16 +6193,25 @@ function deleteMemo(idx, from, studentId){
   if(!confirm('이 관찰 메모를 삭제할까요?')) return;
   if(idx < 0 || idx >= memos.length) return;
   const m = memos[idx];
-  // Firebase에서도 삭제
+
+  // Firebase에서도 삭제 (source에 따라 경로 다름)
   if(m.fbKey && typeof _fbDB !== 'undefined' && _fbDB){
-    _fbDB.ref(`memos/${m.fbKey}`).remove().catch(()=>{});
+    const path = m.source==='observations' ? `observations/${m.fbKey}` : `memos/${m.fbKey}`;
+    _fbDB.ref(path).remove().catch(()=>{});
   }
+
+  // observationLogs에서도 제거
+  const obsIdx = observationLogs.findIndex(o=>o.fbKey===m.fbKey);
+  if(obsIdx !== -1) observationLogs.splice(obsIdx, 1);
+
   memos.splice(idx, 1);
-  // 어디서 삭제하든 개인기록 + 교사분석 둘 다 갱신
+
+  // 교사분석 + 개인기록 + 관찰기록 탭 모두 갱신
   const sid = studentId || m.studentId;
   renderDetailMemo(sid);
   renderStatsMemoPanel(sid);
   renderTeacherMemos();
+  renderObserveList();
 }
 
 function renderDetailMemo(id){
