@@ -2785,111 +2785,76 @@ function syncToSheet(log){
   }
 }
 
-// Firebase에서 전체 데이터 불러오기 (실시간 리스너)
+// Firebase에서 전체 데이터 불러오기
 function loadFromSheet(){
   updateSyncStatus('☁️ 데이터 불러오는 중...');
 
   if(!_fbDB){
-    // Firebase 없으면 IndexedDB에서 로드
-    loadLogsFromDB().then(()=>{
-      updateSyncStatus('');
-    });
+    loadLogsFromDB().then(()=>{ updateSyncStatus(''); });
     return;
   }
 
-  // kedi 데이터 먼저 불러오기 (Firebase 있을 때)
-  _fbDB.ref('kedi').once('value').then(kSnap=>{
-    const kData = kSnap.val();
-    if(kData) Object.entries(kData).forEach(([k,v])=>{ kediData[k]=v; });
-  }).catch(()=>{});
+  // logs + kedi + memos 동시에 불러오기
+  Promise.all([
+    _fbDB.ref('logs').once('value'),
+    _fbDB.ref('kedi').once('value'),
+    _fbDB.ref('memos').once('value')
+  ]).then(([logsSnap, kediSnap, memosSnap])=>{
 
-  const knownKeys = new Set();
-
-  const logsRef = _fbDB.ref('logs');
-  logsRef.once('value').then(snap=>{
-    const fbData = snap.val();
-    if(!fbData){
-      // Firebase 비어있으면 IndexedDB에서 로드
-      loadLogsFromDB().then(()=>{ updateSyncStatus(''); });
-      return;
-    }
-
-    // Firebase 데이터로 앱 상태 재구성
+    // ── 1. 점수 로그 ──
+    const fbLogs = logsSnap.val() || {};
     allLogs.length = 0;
     students.forEach(s=>{ s.total=0; s.today=0; });
     Object.keys(catTotal).forEach(k=>{ catTotal[k]=0; });
+    const todayStr = new Date().toLocaleDateString('ko-KR');
 
-    const today = new Date();
-    const todayStr = `${today.getFullYear()}-${today.getMonth()+1}-${today.getDate()}`;
-
-    Object.entries(fbData).forEach(([fbKey, r])=>{
-      if(!r.studentId || !r.activity) return;
+    Object.entries(fbLogs).forEach(([fbKey, r])=>{
+      if(!r || !r.studentId || !r.activity) return;
       const s = students.find(x=>x.id===r.studentId);
       if(!s) return;
       const logDate = new Date(r.date);
       const log = {
-        date: logDate,
-        studentId: r.studentId,
-        grade: r.grade,
-        activity: r.activity,
-        category: r.category,
-        points: Number(r.points)||0,
-        type: r.type||'activity',
-        _fbKey: fbKey  // Firebase 키 저장
+        date: logDate, studentId: r.studentId, grade: r.grade,
+        activity: r.activity, category: r.category,
+        points: Number(r.points)||0, type: r.type||'activity', _fbKey: fbKey
       };
       if(r.weight) log.weight = r.weight;
       allLogs.push(log);
-      knownKeys.add(fbKey); // 실시간 리스너 중복 방지용
       s.total += log.points;
-      const ds = `${logDate.getFullYear()}-${logDate.getMonth()+1}-${logDate.getDate()}`;
-      if(ds===todayStr) s.today += log.points;
+      if(logDate.toLocaleDateString('ko-KR')===todayStr){
+        s.today += log.points;
+        actLog[actLogKey(r.studentId, r.activity)] = true;
+      }
       if(r.category) catTotal[r.category] = (catTotal[r.category]||0) + log.points;
-      // actLog 복구 — 오늘 기록한 활동은 중복 방지
-      if(ds===todayStr) actLog[actLogKey(r.studentId, r.activity)] = true;
     });
 
-    renderStudents(); renderStats();
-    updateSyncStatus(`✅ ${Object.keys(fbData).length}건 동기화 완료`);
+    // ── 2. 인성검사 ──
+    const fbKedi = kediSnap.val() || {};
+    Object.entries(fbKedi).forEach(([k,v])=>{ kediData[k]=v; });
+
+    // ── 3. 관찰메모 ──
+    const fbMemos = memosSnap.val() || {};
+    memos.length = 0;
+    Object.entries(fbMemos).forEach(([k,v])=>{
+      memos.push({
+        fbKey: k, studentId: v.studentId, text: v.text||'',
+        photos: v.photos||[], audio: v.audio||[],
+        date: new Date(v.ts||Date.now())
+      });
+    });
+    memos.sort((a,b)=>a.date-b.date);
+
+    // ── UI 갱신 ──
+    renderStudents();
+    renderStats();
+    updateSyncStatus(`✅ ${Object.keys(fbLogs).length}건 동기화 완료`);
     setTimeout(()=>updateSyncStatus(''), 3000);
+    console.log(`✅ logs:${Object.keys(fbLogs).length} kedi:${Object.keys(fbKedi).length} memos:${Object.keys(fbMemos).length}`);
 
-    // 인성검사 데이터도 불러오기
-    _fbDB.ref('kedi').once('value').then(kSnap=>{
-      const kData = kSnap.val();
-      if(kData){
-        Object.entries(kData).forEach(([k,v])=>{ kediData[k]=v; });
-        console.log(`💚 인성검사 ${Object.keys(kData).length}건 불러옴`);
-      }
-    }).catch(()=>{});
-
-    // 관찰메모 불러오기
-    _fbDB.ref('memos').once('value').then(mSnap=>{
-      const mData = mSnap.val();
-      if(mData){
-        const loaded = Object.entries(mData).map(([k,v])=>({
-          fbKey: k,
-          studentId: v.studentId,
-          text: v.text||'',
-          photos: v.photos||[],
-          audio: v.audio||[],
-          date: new Date(v.ts||Date.now())
-        }));
-        // 중복 제거 후 병합
-        const existingKeys = new Set(memos.map(m=>m.fbKey).filter(Boolean));
-        loaded.forEach(m=>{ if(!existingKeys.has(m.fbKey)) memos.push(m); });
-        memos.sort((a,b)=>a.date-b.date);
-        console.log(`📝 관찰메모 ${loaded.length}건 불러옴`);
-        renderTeacherMemos();
-      }
-    }).catch(()=>{});
-
-  }).catch(()=>{
+  }).catch(e=>{
+    console.error('loadFromSheet 오류:', e);
     loadLogsFromDB().then(()=>{ updateSyncStatus(''); });
   });
-
-  // 실시간 리스너 — 다른 태블릿에서 새로 입력한 것만 반영
-  // once('value') 완료 후 등록해서 기존 데이터 중복 방지
-
-  // 실시간 리스너 제거 - once()로만 불러오기 (중복 방지)
 }
 
 // 오프라인 → 온라인 복귀 시 미동기 항목 Firebase로 전송
