@@ -2839,10 +2839,13 @@ function loadFromSheet(){
       };
       if(r.weight) log.weight = r.weight;
       allLogs.push(log);
+      knownKeys.add(fbKey); // 실시간 리스너 중복 방지용
       s.total += log.points;
       const ds = `${logDate.getFullYear()}-${logDate.getMonth()+1}-${logDate.getDate()}`;
       if(ds===todayStr) s.today += log.points;
       if(r.category) catTotal[r.category] = (catTotal[r.category]||0) + log.points;
+      // actLog 복구 — 오늘 기록한 활동은 중복 방지
+      if(ds===todayStr) actLog[actLogKey(r.studentId, r.activity)] = true;
     });
 
     renderStudents(); renderStats();
@@ -2886,39 +2889,7 @@ function loadFromSheet(){
   // 실시간 리스너 — 다른 태블릿에서 새로 입력한 것만 반영
   // once('value') 완료 후 등록해서 기존 데이터 중복 방지
 
-  logsRef.on('child_added', snap=>{
-    // 이미 로드한 키면 무시
-    if(knownKeys.has(snap.key)) return;
-    knownKeys.add(snap.key);
-
-    const r = snap.val();
-    if(!r || !r.studentId || !r.activity) return;
-    const s = students.find(x=>x.id===r.studentId);
-    if(!s) return;
-
-    const logDate = new Date(r.date);
-    const log = {
-      date: logDate,
-      studentId: r.studentId,
-      grade: r.grade,
-      activity: r.activity,
-      category: r.category,
-      points: Number(r.points)||0,
-      type: r.type||'activity',
-      _fbKey: snap.key
-    };
-    if(r.weight) log.weight = r.weight;
-    allLogs.push(log);
-    s.total += log.points;
-
-    const today = new Date();
-    const todayStr = `${today.getFullYear()}-${today.getMonth()+1}-${today.getDate()}`;
-    const ds = `${logDate.getFullYear()}-${logDate.getMonth()+1}-${logDate.getDate()}`;
-    if(ds===todayStr) s.today += log.points;
-    if(r.category) catTotal[r.category] = (catTotal[r.category]||0) + log.points;
-
-    renderStudents(); renderStats();
-  });
+  // 실시간 리스너 제거 - once()로만 불러오기 (중복 방지)
 }
 
 // 오프라인 → 온라인 복귀 시 미동기 항목 Firebase로 전송
