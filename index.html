@@ -966,6 +966,27 @@ function triggerPWAInstall(){
 
 <!-- ============ SCREEN 1: MAIN ============ -->
 <main id="screen-main" class="screen active">
+
+  <!-- 온마음갤러리 전체 너비 -->
+  <div style="padding:20px 20px 10px;max-width:1366px;margin:0 auto">
+    <div style="background:var(--bg-2);border-radius:18px;padding:16px 20px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <div>
+          <div style="font-size:15px;font-weight:900;color:var(--ink)">🖼️ 온마음갤러리</div>
+          <div style="font-size:11px;color:var(--ink-soft);margin-top:2px">우리가 함께한 소중한 순간들</div>
+        </div>
+        <button onclick="goto('gallery')" style="background:none;border:1.5px solid var(--line);border-radius:999px;
+          padding:5px 14px;font-family:inherit;font-size:12px;font-weight:700;
+          cursor:pointer;color:var(--ink-soft)">전체 보기 →</button>
+      </div>
+      <div id="mainGalleryGrid" style="display:grid;grid-template-columns:repeat(10,1fr);gap:6px">
+        <div style="grid-column:1/-1;text-align:center;padding:24px 0;color:var(--ink-soft);font-size:13px">
+          아직 사진이 없어요 📷
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div class="stage">
     <section class="panel">
       <h2>오늘 누가 왔나요? <span class="accent">🌿</span></h2>
@@ -1035,26 +1056,6 @@ function triggerPWAInstall(){
         </span>
       </div>
     </aside>
-  </div>
-
-  <!-- 온마음갤러리 전체 너비 -->
-  <div style="padding:0 20px 20px;max-width:1366px;margin:0 auto">
-    <div style="background:var(--bg-2);border-radius:18px;padding:16px 20px">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-        <div>
-          <div style="font-size:15px;font-weight:900;color:var(--ink)">🖼️ 온마음갤러리</div>
-          <div style="font-size:11px;color:var(--ink-soft);margin-top:2px">우리가 함께한 소중한 순간들</div>
-        </div>
-        <button onclick="goto('gallery')" style="background:none;border:1.5px solid var(--line);border-radius:999px;
-          padding:5px 14px;font-family:inherit;font-size:12px;font-weight:700;
-          cursor:pointer;color:var(--ink-soft)">전체 보기 →</button>
-      </div>
-      <div id="mainGalleryGrid" style="display:grid;grid-template-columns:repeat(10,1fr);gap:6px">
-        <div style="grid-column:1/-1;text-align:center;padding:24px 0;color:var(--ink-soft);font-size:13px">
-          아직 사진이 없어요 📷
-        </div>
-      </div>
-    </div>
   </div>
 </main>
 
