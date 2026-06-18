@@ -5299,27 +5299,62 @@ function deleteGalleryPhoto(){
 function deleteGalleryPhotoByIdx(idx){
   if(!confirm('이 사진을 삭제할까요?')) return;
   const p = galleryPhotos[idx];
-  if(p.fbKey && typeof _fbDB !== 'undefined' && _fbDB){
+  // gallery 출처만 Firebase에서 삭제 가능 (관찰기록 사진은 해당 경로에서 삭제해야 함)
+  if(p.source==='gallery' && p.fbKey && typeof _fbDB !== 'undefined' && _fbDB){
     _fbDB.ref(`gallery/${p.fbKey}`).remove().catch(()=>{});
+  } else if(p.source !== 'gallery'){
+    alert('관찰기록 사진은 관찰기록 탭에서 삭제해주세요!');
+    return;
   }
   galleryPhotos.splice(idx, 1);
   renderGalleryGrid();
+  renderMainGallery();
 }
 
 function initGalleryScreen(){
-  // Firebase에서 갤러리 사진 불러오기
   if(typeof _fbDB !== 'undefined' && _fbDB){
     galleryPhotos.length = 0;
-    _fbDB.ref('gallery').orderByChild('ts').once('value').then(snap=>{
+
+    const p1 = _fbDB.ref('gallery').once('value').then(snap=>{
       const data = snap.val();
-      if(data){
-        Object.entries(data).reverse().forEach(([k,v])=>{
-          galleryPhotos.push({fbKey:k, url:v.url, ts:v.ts});
+      if(data) Object.entries(data).forEach(([k,v])=>{
+        if(v.url) galleryPhotos.push({fbKey:k, source:'gallery', url:v.url, ts:v.ts||0});
+      });
+    }).catch(()=>{});
+
+    const p2 = _fbDB.ref('observations').once('value').then(snap=>{
+      const data = snap.val();
+      if(data) Object.entries(data).forEach(([k,v])=>{
+        if(v.photos) v.photos.forEach(url=>{
+          galleryPhotos.push({fbKey:k, source:'observation', url, ts:v.ts||0, studentId:v.studentId});
         });
-      }
+      });
+    }).catch(()=>{});
+
+    const p3 = _fbDB.ref('memos').once('value').then(snap=>{
+      const data = snap.val();
+      if(data) Object.entries(data).forEach(([k,v])=>{
+        if(v.photos) v.photos.forEach(url=>{
+          galleryPhotos.push({fbKey:k, source:'memo', url, ts:v.ts||0, studentId:v.studentId});
+        });
+      });
+    }).catch(()=>{});
+
+    const p4 = _fbDB.ref('teacherObs').once('value').then(snap=>{
+      const data = snap.val();
+      if(data) Object.entries(data).forEach(([k,v])=>{
+        if(v.photos) v.photos.forEach(url=>{
+          galleryPhotos.push({fbKey:k, source:'teacher', url, ts:v.ts||0, teacherName:v.teacherName});
+        });
+      });
+    }).catch(()=>{});
+
+    Promise.all([p1,p2,p3,p4]).then(()=>{
+      // 최신순 정렬
+      galleryPhotos.sort((a,b)=>b.ts-a.ts);
       renderGalleryGrid();
       renderMainGallery();
-    }).catch(()=>{ renderGalleryGrid(); renderMainGallery(); });
+    });
   } else {
     renderGalleryGrid();
     renderMainGallery();
