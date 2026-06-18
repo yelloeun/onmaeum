@@ -944,7 +944,6 @@ function triggerPWAInstall(){
     <div class="nav-btns">
       <button class="nav-btn" onclick="goto('main')">🏠 메인</button>
       <button class="nav-btn" onclick="goto('janban')">🥣 잔반 입력</button>
-      <button class="nav-btn" onclick="goto('sound')">🎧 소리산책</button>
       <button class="nav-btn" onclick="goto('observe')">✏️ 관찰기록</button>
       <button class="nav-btn" onclick="openDetail('서아')">🌳 개인 기록</button>
       <button class="nav-btn" onclick="goto('kedi')">💚 인성검사</button>
@@ -1036,6 +1035,26 @@ function triggerPWAInstall(){
         </span>
       </div>
     </aside>
+  </div>
+
+  <!-- 온마음갤러리 전체 너비 -->
+  <div style="padding:0 20px 20px;max-width:1366px;margin:0 auto">
+    <div style="background:var(--bg-2);border-radius:18px;padding:16px 20px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <div>
+          <div style="font-size:15px;font-weight:900;color:var(--ink)">🖼️ 온마음갤러리</div>
+          <div style="font-size:11px;color:var(--ink-soft);margin-top:2px">우리가 함께한 소중한 순간들</div>
+        </div>
+        <button onclick="goto('gallery')" style="background:none;border:1.5px solid var(--line);border-radius:999px;
+          padding:5px 14px;font-family:inherit;font-size:12px;font-weight:700;
+          cursor:pointer;color:var(--ink-soft)">전체 보기 →</button>
+      </div>
+      <div id="mainGalleryGrid" style="display:grid;grid-template-columns:repeat(10,1fr);gap:6px">
+        <div style="grid-column:1/-1;text-align:center;padding:24px 0;color:var(--ink-soft);font-size:13px">
+          아직 사진이 없어요 📷
+        </div>
+      </div>
+    </div>
   </div>
 </main>
 
@@ -1370,117 +1389,327 @@ function triggerPWAInstall(){
   <div class="sound-wrap">
     <button class="back" onclick="goto('main')">← 메인으로</button>
     <h2 style="margin:0 0 4px;font-size:24px">✏️ 관찰기록 · 오늘 발견한 것</h2>
-    <p style="color:var(--ink-soft);margin:0 0 20px;font-size:13px">새롭게 발견한 것과 느낀 점을 기록해요. 친구들의 기록도 함께 볼 수 있어요.</p>
+    <p style="color:var(--ink-soft);margin:0 0 16px;font-size:13px">새롭게 발견한 것과 느낀 점을 기록해요. 친구들의 기록도 함께 볼 수 있어요.</p>
 
-    <div class="sound-grid">
-      <!-- 왼쪽: 내 관찰 기록하기 -->
-      <div class="sound-card">
-        <h3>🔍 내 관찰 기록하기</h3>
-        <p class="lead">이름을 선택하고 오늘 발견한 것을 적어봐요</p>
+    <!-- 탭 -->
+    <div style="display:flex;gap:0;border-bottom:2px solid var(--line);margin-bottom:18px">
+      <button id="obsTab-student" onclick="switchObsTab('student')"
+        style="background:transparent;border:none;border-bottom:3px solid var(--accent);
+        padding:9px 24px;font-family:inherit;font-size:14px;font-weight:800;
+        cursor:pointer;color:var(--accent);margin-bottom:-2px">🌱 유아</button>
+      <button id="obsTab-teacher" onclick="switchObsTab('teacher')"
+        style="background:transparent;border:none;border-bottom:3px solid transparent;
+        padding:9px 24px;font-family:inherit;font-size:14px;font-weight:800;
+        cursor:pointer;color:var(--ink-soft);margin-bottom:-2px">👩‍🏫 교사</button>
+    </div>
 
-        <!-- 이름 선택 -->
-        <div class="sound-pick" id="observePick"></div>
+    <!-- 유아 탭 -->
+    <div id="obsPanel-student">
+      <div class="sound-grid">
+        <!-- 왼쪽: 유아 입력 -->
+        <div class="sound-card">
+          <h3>🔍 내 관찰 기록하기</h3>
+          <p class="lead">이름을 선택하고 오늘 발견한 것을 적어봐요</p>
+          <div class="sound-pick" id="observePick"></div>
+          <div id="observeInputArea" style="display:none">
+            <div style="font-size:13px;font-weight:900;color:var(--accent);margin-bottom:14px;padding:8px 14px;background:#EEF6E8;border-radius:10px" id="observePickName">누구의 기록?</div>
 
-        <!-- 입력 영역 -->
-        <div id="observeInputArea" style="display:none">
-          <div style="font-size:13px;font-weight:900;color:var(--accent);margin-bottom:14px;padding:8px 14px;background:#EEF6E8;border-radius:10px" id="observePickName">누구의 기록?</div>
+            <div style="margin-bottom:12px">
+              <div style="font-size:11px;font-weight:900;color:var(--ink-soft);margin-bottom:6px;display:flex;align-items:center;gap:5px">
+                <span style="font-size:15px">🔍</span> 오늘 새롭게 발견한 것
+              </div>
+              <textarea id="obsDiscover" placeholder="오늘 관찰하거나 새롭게 알게 된 것을 적어봐요..." rows="3"
+                style="width:100%;border:2px solid var(--line);border-radius:12px;padding:10px 13px;
+                font-family:inherit;font-size:13px;resize:none;outline:none;background:#FAFAF6;
+                transition:border-color .15s;box-sizing:border-box"
+                onfocus="this.style.borderColor='var(--accent)'"
+                onblur="this.style.borderColor='var(--line)'"></textarea>
+            </div>
 
-          <!-- 발견한 것 -->
+            <div style="margin-bottom:12px">
+              <div style="font-size:11px;font-weight:900;color:var(--ink-soft);margin-bottom:6px;display:flex;align-items:center;gap:5px">
+                <span style="font-size:15px">💭</span> 느낌 &amp; 소감
+              </div>
+              <textarea id="obsFeeling" placeholder="보고, 듣고, 느낀 점을 자유롭게 써봐요..." rows="3"
+                style="width:100%;border:2px solid var(--line);border-radius:12px;padding:10px 13px;
+                font-family:inherit;font-size:13px;resize:none;outline:none;background:#FAFAF6;
+                transition:border-color .15s;box-sizing:border-box"
+                onfocus="this.style.borderColor='var(--accent)'"
+                onblur="this.style.borderColor='var(--line)'"></textarea>
+            </div>
+
+            <!-- 사진 -->
+            <div style="margin-bottom:12px">
+              <div style="font-size:11px;font-weight:900;color:var(--ink-soft);margin-bottom:8px">📸 사진 첨부 (선택)</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:8px">
+                <label style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;
+                  border:2px dashed var(--line);border-radius:12px;padding:14px 8px;cursor:pointer;
+                  color:var(--ink-soft);font-size:12px;font-weight:700;background:#FAFAF6;text-align:center"
+                  onmouseover="this.style.borderColor='var(--accent)'"
+                  onmouseout="this.style.borderColor='var(--line)'">
+                  <input type="file" accept="image/*" multiple id="obsPhotoInput"
+                    onchange="obsPreviewPhotos(this)" style="display:none">
+                  <span style="font-size:24px">🖼️</span>갤러리 선택
+                </label>
+                <button onclick="openObsCamera()" type="button" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;
+                  border:2px dashed #7FB7CE;border-radius:12px;padding:14px 8px;cursor:pointer;
+                  color:#3F8AA6;font-size:12px;font-weight:700;background:#F0F8FC;font-family:inherit"
+                  onmouseover="this.style.borderColor='#3F8AA6'"
+                  onmouseout="this.style.borderColor='#7FB7CE'">
+                  <span style="font-size:24px">📷</span>카메라 찍기
+                </button>
+              </div>
+              <div id="obsCameraWrap" style="display:none;margin-bottom:8px">
+                <div style="position:relative;border-radius:12px;overflow:hidden;background:#000;max-height:260px">
+                  <video id="obsCameraVideo" autoplay playsinline style="width:100%;max-height:260px;object-fit:cover;display:block"></video>
+                  <div style="position:absolute;bottom:12px;left:0;right:0;display:flex;justify-content:center;gap:12px">
+                    <button onclick="snapObsPhoto()" style="width:54px;height:54px;border-radius:50%;background:#fff;border:3px solid rgba(255,255,255,.6);font-size:22px;cursor:pointer;box-shadow:0 3px 10px rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center">📸</button>
+                    <button onclick="closeObsCamera()" style="width:38px;height:38px;border-radius:50%;background:rgba(0,0,0,.5);border:2px solid rgba(255,255,255,.4);color:#fff;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center">✕</button>
+                  </div>
+                  <button onclick="flipObsCamera()" style="position:absolute;top:8px;right:8px;background:rgba(0,0,0,.45);border:none;border-radius:999px;color:#fff;font-size:12px;font-weight:700;padding:5px 10px;cursor:pointer">🔄 전환</button>
+                </div>
+                <canvas id="obsCameraCanvas" style="display:none"></canvas>
+              </div>
+              <div id="obsPhotoPreview" style="display:flex;gap:6px;flex-wrap:wrap"></div>
+            </div>
+
+            <!-- 녹음 -->
+            <div style="margin-bottom:12px">
+              <div style="font-size:11px;font-weight:900;color:var(--ink-soft);margin-bottom:8px">🎙️ 음성 녹음 (선택)</div>
+              <div style="display:flex;gap:8px;align-items:center">
+                <button id="obsRecBtn" onclick="toggleObsRecording()"
+                  style="background:var(--warm);color:#fff;border:none;border-radius:999px;
+                  padding:9px 18px;font-family:inherit;font-size:13px;font-weight:800;cursor:pointer">
+                  🎙️ 녹음 시작
+                </button>
+                <span id="obsRecTimer" style="font-size:13px;font-weight:700;color:var(--warm)"></span>
+              </div>
+              <div id="obsAudioList" style="margin-top:8px;display:flex;flex-direction:column;gap:6px"></div>
+            </div>
+
+            <!-- 소리산책 MP3 업로드 -->
+            <div style="margin-bottom:16px">
+              <div style="font-size:11px;font-weight:900;color:var(--ink-soft);margin-bottom:8px">🎧 소리산책 (선택)</div>
+              <label id="obsSoundLabel" style="display:flex;align-items:center;gap:12px;
+                border:2px dashed #E07A3C;border-radius:12px;padding:12px 16px;
+                cursor:pointer;background:#FFF8F2;color:#8A4A10">
+                <input type="file" accept="audio/*" id="obsSoundInput"
+                  onchange="handleObsSoundUpload(this)" style="display:none">
+                <span style="font-size:24px">🎧</span>
+                <div>
+                  <div style="font-size:13px;font-weight:900" id="obsSoundLabelText">OO의 소리산책 — MP3 파일 선택</div>
+                  <div style="font-size:11px;color:#B5804A;margin-top:2px">MP3, WAV, OGG 모두 가능해요</div>
+                </div>
+              </label>
+              <div id="obsSoundPreview" style="margin-top:8px"></div>
+            </div>
+
+            <button onclick="saveObservation()"
+              style="width:100%;background:linear-gradient(135deg,#3D7A4A,#6FB37C);color:#fff;
+              border:none;border-radius:14px;padding:14px;font-family:inherit;font-size:15px;
+              font-weight:900;cursor:pointer;box-shadow:0 4px 12px rgba(61,122,74,.3)">
+              ✅ 관찰 기록 저장
+            </button>
+          </div>
+        </div>
+
+        <!-- 오른쪽: 우리 반 관찰 모음 -->
+        <div class="sound-card">
+          <h3>🌿 우리 반 관찰 모음</h3>
+          <p class="lead">친구들이 기록한 관찰을 함께 봐요</p>
+          <div id="observeList">
+            <div style="text-align:center;color:var(--ink-soft);font-size:13px;padding:40px 0">
+              아직 기록된 관찰이 없어요 🌱<br>
+              <span style="font-size:12px">첫 번째 관찰을 기록해보세요!</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 교사 탭 -->
+    <div id="obsPanel-teacher" style="display:none">
+      <div class="sound-grid">
+        <!-- 왼쪽: 교사 입력 -->
+        <div class="sound-card">
+          <h3>👩‍🏫 교사 관찰 기록하기</h3>
+          <p class="lead">이름을 입력하고 관찰 내용을 기록해요</p>
+
+          <!-- 교사 이름 -->
+          <div style="margin-bottom:14px">
+            <div style="font-size:11px;font-weight:900;color:var(--ink-soft);margin-bottom:6px">✍️ 교사 이름</div>
+            <input type="text" id="teacherObsName" placeholder="예) 김온마음 선생님"
+              style="width:100%;border:2px solid var(--line);border-radius:12px;padding:10px 13px;
+              font-family:inherit;font-size:13px;outline:none;background:#FAFAF6;
+              transition:border-color .15s;box-sizing:border-box"
+              onfocus="this.style.borderColor='var(--sky)'"
+              onblur="this.style.borderColor='var(--line)'">
+          </div>
+
+          <!-- 관찰 대상 유아 (선택사항) -->
+          <div style="margin-bottom:14px">
+            <div style="font-size:11px;font-weight:900;color:var(--ink-soft);margin-bottom:6px">
+              🌱 관찰 대상 유아 <span style="font-weight:400;color:#aaa;font-size:10px">(선택 안 하면 전체 기록)</span>
+            </div>
+            <div class="sound-pick" id="teacherObsPick"></div>
+          </div>
+
+          <!-- 관찰 내용 -->
           <div style="margin-bottom:12px">
             <div style="font-size:11px;font-weight:900;color:var(--ink-soft);margin-bottom:6px;display:flex;align-items:center;gap:5px">
-              <span style="font-size:15px">🔍</span> 오늘 새롭게 발견한 것
+              <span style="font-size:15px">📝</span> 관찰 내용
             </div>
-            <textarea id="obsDiscover" placeholder="오늘 관찰하거나 새롭게 알게 된 것을 적어봐요..." rows="3"
+            <textarea id="teacherObsContent" placeholder="오늘 관찰한 내용을 자유롭게 적어요..." rows="4"
               style="width:100%;border:2px solid var(--line);border-radius:12px;padding:10px 13px;
               font-family:inherit;font-size:13px;resize:none;outline:none;background:#FAFAF6;
               transition:border-color .15s;box-sizing:border-box"
-              onfocus="this.style.borderColor='var(--accent)'"
+              onfocus="this.style.borderColor='var(--sky)'"
               onblur="this.style.borderColor='var(--line)'"></textarea>
           </div>
 
-          <!-- 느낌&소감 -->
+          <!-- 느낀 점 -->
           <div style="margin-bottom:14px">
             <div style="font-size:11px;font-weight:900;color:var(--ink-soft);margin-bottom:6px;display:flex;align-items:center;gap:5px">
-              <span style="font-size:15px">💭</span> 느낌 &amp; 소감
+              <span style="font-size:15px">💭</span> 느낀 점
             </div>
-            <textarea id="obsFeeling" placeholder="보고, 듣고, 느낀 점을 자유롭게 써봐요..." rows="3"
+            <textarea id="teacherObsFeeling" placeholder="교사로서 느낀 점을 적어요..." rows="3"
               style="width:100%;border:2px solid var(--line);border-radius:12px;padding:10px 13px;
               font-family:inherit;font-size:13px;resize:none;outline:none;background:#FAFAF6;
               transition:border-color .15s;box-sizing:border-box"
-              onfocus="this.style.borderColor='var(--accent)'"
+              onfocus="this.style.borderColor='var(--sky)'"
               onblur="this.style.borderColor='var(--line)'"></textarea>
           </div>
 
           <!-- 사진 -->
           <div style="margin-bottom:14px">
             <div style="font-size:11px;font-weight:900;color:var(--ink-soft);margin-bottom:8px">📸 사진 첨부 (선택)</div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:8px">
-              <label style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;
-                border:2px dashed var(--line);border-radius:12px;padding:14px 8px;cursor:pointer;
-                color:var(--ink-soft);font-size:12px;font-weight:700;background:#FAFAF6;text-align:center"
-                onmouseover="this.style.borderColor='var(--accent)'"
-                onmouseout="this.style.borderColor='var(--line)'">
-                <input type="file" accept="image/*" multiple id="obsPhotoInput"
-                  onchange="obsPreviewPhotos(this)" style="display:none">
-                <span style="font-size:24px">🖼️</span>갤러리 선택
-              </label>
-              <button onclick="openObsCamera()" type="button" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;
-                border:2px dashed #7FB7CE;border-radius:12px;padding:14px 8px;cursor:pointer;
-                color:#3F8AA6;font-size:12px;font-weight:700;background:#F0F8FC;font-family:inherit"
-                onmouseover="this.style.borderColor='#3F8AA6'"
-                onmouseout="this.style.borderColor='#7FB7CE'">
-                <span style="font-size:24px">📷</span>카메라 찍기
-              </button>
-            </div>
-            <!-- 카메라 UI -->
-            <div id="obsCameraWrap" style="display:none;margin-bottom:8px">
-              <div style="position:relative;border-radius:12px;overflow:hidden;background:#000;max-height:260px">
-                <video id="obsCameraVideo" autoplay playsinline style="width:100%;max-height:260px;object-fit:cover;display:block"></video>
-                <div style="position:absolute;bottom:12px;left:0;right:0;display:flex;justify-content:center;gap:12px">
-                  <button onclick="snapObsPhoto()" style="width:54px;height:54px;border-radius:50%;background:#fff;border:3px solid rgba(255,255,255,.6);font-size:22px;cursor:pointer;box-shadow:0 3px 10px rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center">📸</button>
-                  <button onclick="closeObsCamera()" style="width:38px;height:38px;border-radius:50%;background:rgba(0,0,0,.5);border:2px solid rgba(255,255,255,.4);color:#fff;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center">✕</button>
-                </div>
-                <button onclick="flipObsCamera()" style="position:absolute;top:8px;right:8px;background:rgba(0,0,0,.45);border:none;border-radius:999px;color:#fff;font-size:12px;font-weight:700;padding:5px 10px;cursor:pointer">🔄 전환</button>
-              </div>
-              <canvas id="obsCameraCanvas" style="display:none"></canvas>
-            </div>
-            <div id="obsPhotoPreview" style="display:flex;gap:6px;flex-wrap:wrap"></div>
+            <label style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;
+              border:2px dashed var(--line);border-radius:12px;padding:14px;cursor:pointer;
+              color:var(--ink-soft);font-size:12px;font-weight:700;background:#FAFAF6;text-align:center"
+              onmouseover="this.style.borderColor='var(--sky)'"
+              onmouseout="this.style.borderColor='var(--line)'">
+              <input type="file" accept="image/*" multiple id="teacherObsPhotoInput"
+                onchange="teacherObsPreviewPhotos(this)" style="display:none">
+              <span style="font-size:24px">🖼️</span>사진 선택 (여러 장 가능)
+            </label>
+            <div id="teacherObsPhotoPreview" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px"></div>
           </div>
 
           <!-- 녹음 -->
-          <div style="margin-bottom:16px">
+          <div style="margin-bottom:12px">
             <div style="font-size:11px;font-weight:900;color:var(--ink-soft);margin-bottom:8px">🎙️ 음성 녹음 (선택)</div>
             <div style="display:flex;gap:8px;align-items:center">
-              <button id="obsRecBtn" onclick="toggleObsRecording()"
+              <button id="teacherRecBtn" onclick="toggleTeacherRecording()"
                 style="background:var(--warm);color:#fff;border:none;border-radius:999px;
                 padding:9px 18px;font-family:inherit;font-size:13px;font-weight:800;cursor:pointer">
                 🎙️ 녹음 시작
               </button>
-              <span id="obsRecTimer" style="font-size:13px;font-weight:700;color:var(--warm)"></span>
+              <span id="teacherRecTimer" style="font-size:13px;font-weight:700;color:var(--warm)"></span>
             </div>
-            <div id="obsAudioList" style="margin-top:8px;display:flex;flex-direction:column;gap:6px"></div>
+            <div id="teacherAudioList" style="margin-top:8px;display:flex;flex-direction:column;gap:6px"></div>
           </div>
 
-          <!-- 저장 버튼 -->
-          <button onclick="saveObservation()"
-            style="width:100%;background:linear-gradient(135deg,#3D7A4A,#6FB37C);color:#fff;
+          <!-- 소리산책 MP3 -->
+          <div style="margin-bottom:16px">
+            <div style="font-size:11px;font-weight:900;color:var(--ink-soft);margin-bottom:8px">🎧 소리산책 (선택)</div>
+            <label style="display:flex;align-items:center;gap:12px;
+              border:2px dashed #E07A3C;border-radius:12px;padding:12px 16px;
+              cursor:pointer;background:#FFF8F2;color:#8A4A10">
+              <input type="file" accept="audio/*" id="teacherSoundInput"
+                onchange="handleTeacherSoundUpload(this)" style="display:none">
+              <span style="font-size:24px">🎧</span>
+              <div>
+                <div style="font-size:13px;font-weight:900">교사 소리산책 — MP3 파일 선택</div>
+                <div style="font-size:11px;color:#B5804A;margin-top:2px">MP3, WAV, OGG 모두 가능해요</div>
+              </div>
+            </label>
+            <div id="teacherSoundPreview" style="margin-top:8px"></div>
+          </div>
+
+          <button onclick="saveTeacherObservation()"
+            style="width:100%;background:linear-gradient(135deg,#3F8AA6,#5B8FA8);color:#fff;
             border:none;border-radius:14px;padding:14px;font-family:inherit;font-size:15px;
-            font-weight:900;cursor:pointer;box-shadow:0 4px 12px rgba(61,122,74,.3)">
-            ✅ 관찰 기록 저장
+            font-weight:900;cursor:pointer;box-shadow:0 4px 12px rgba(63,138,166,.3)">
+            ✅ 교사 관찰 기록 저장
           </button>
         </div>
-      </div>
 
-      <!-- 오른쪽: 우리 반 관찰 모음 -->
-      <div class="sound-card">
-        <h3>🌿 우리 반 관찰 모음</h3>
-        <p class="lead">친구들이 기록한 관찰을 함께 봐요</p>
-        <div id="observeList">
-          <div style="text-align:center;color:var(--ink-soft);font-size:13px;padding:40px 0">
-            아직 기록된 관찰이 없어요 🌱<br>
-            <span style="font-size:12px">첫 번째 관찰을 기록해보세요!</span>
+        <!-- 오른쪽: 교사 관찰 모음 -->
+        <div class="sound-card">
+          <h3>📋 교사 관찰 기록 모음</h3>
+          <p class="lead">선생님들이 남긴 관찰 기록이에요</p>
+          <div id="teacherObserveList">
+            <div style="text-align:center;color:var(--ink-soft);font-size:13px;padding:40px 0">
+              아직 교사 관찰 기록이 없어요 📝<br>
+              <span style="font-size:12px">첫 번째 기록을 남겨보세요!</span>
+            </div>
           </div>
         </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<!-- ============ SCREEN: 온마음갤러리 ============ -->
+<main id="screen-gallery" class="screen">
+  <div class="sound-wrap">
+    <button class="back" onclick="goto('main')">← 메인으로</button>
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:4px">
+      <div>
+        <h2 style="margin:0 0 4px;font-size:24px">🖼️ 온마음갤러리</h2>
+        <p style="color:var(--ink-soft);margin:0;font-size:13px">우리가 함께한 소중한 순간들을 담았어요</p>
+      </div>
+      <!-- 관리자만 업로드 가능 -->
+      <div id="galleryAdminArea" style="display:none;gap:8px;align-items:center">
+        <label style="background:var(--accent);color:#fff;border-radius:12px;padding:10px 18px;
+          font-size:13px;font-weight:800;cursor:pointer;display:flex;align-items:center;gap:6px">
+          <input type="file" accept="image/*" multiple id="galleryUploadInput"
+            onchange="uploadGalleryPhotos(this)" style="display:none">
+          📸 사진 추가
+        </label>
+      </div>
+    </div>
+
+    <!-- 관리자 잠금 버튼 -->
+    <div style="margin-bottom:16px">
+      <button id="galleryAdminBtn" onclick="toggleGalleryAdmin()"
+        style="background:none;border:1.5px solid var(--line);border-radius:999px;
+        padding:5px 14px;font-family:inherit;font-size:12px;font-weight:700;
+        cursor:pointer;color:var(--ink-soft)">🔐 관리자 업로드</button>
+      <span id="galleryUploadStatus" style="font-size:12px;color:var(--accent);margin-left:10px;font-weight:700"></span>
+    </div>
+
+    <!-- 사진 그리드 -->
+    <div id="galleryGrid" style="
+      display:grid;
+      grid-template-columns:repeat(auto-fill,minmax(160px,1fr));
+      gap:10px">
+      <div style="grid-column:1/-1;text-align:center;padding:60px 0;color:var(--ink-soft);font-size:13px">
+        아직 사진이 없어요 📷<br>
+        <span style="font-size:12px">관리자 모드에서 사진을 추가해보세요!</span>
+      </div>
+    </div>
+
+    <!-- 사진 크게 보기 모달 -->
+    <div id="galleryViewModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.92);
+      z-index:300;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px"
+      onclick="closeGalleryView()">
+      <img id="galleryViewImg" src="" style="max-width:95vw;max-height:85vh;object-fit:contain;border-radius:12px">
+      <div style="display:flex;gap:12px">
+        <button id="galleryViewPrev" onclick="event.stopPropagation();galleryViewNav(-1)"
+          style="background:rgba(255,255,255,.2);border:none;border-radius:999px;color:#fff;
+          font-size:20px;padding:8px 16px;cursor:pointer">◀</button>
+        <button onclick="closeGalleryView()"
+          style="background:rgba(255,255,255,.15);border:none;border-radius:999px;color:#fff;
+          font-size:13px;font-weight:700;padding:8px 20px;cursor:pointer">닫기</button>
+        <button id="galleryViewNext" onclick="event.stopPropagation();galleryViewNav(1)"
+          style="background:rgba(255,255,255,.2);border:none;border-radius:999px;color:#fff;
+          font-size:20px;padding:8px 16px;cursor:pointer">▶</button>
+      </div>
+      <div id="galleryViewDelete" style="display:none">
+        <button onclick="event.stopPropagation();deleteGalleryPhoto()"
+          style="background:#E94F33;border:none;border-radius:999px;color:#fff;
+          font-size:13px;font-weight:700;padding:8px 20px;cursor:pointer">🗑️ 삭제</button>
       </div>
     </div>
   </div>
@@ -3033,66 +3262,48 @@ function goto(name){
   if(name==='kedi')    initKedi();
   if(name==='stats')   initStats();
   if(name==='observe') initObserveScreen();
+  if(name==='gallery') initGalleryScreen();
 }
 
 function initObserveScreen(){
   renderObservePick();
-  // Firebase에서 항상 최신 관찰기록 불러오기 (observations + memos 합치기)
-  if(typeof _fbDB!=='undefined' && _fbDB){
-    observationLogs.length=0;
+  switchObsTab('student');
 
+  if(typeof _fbDB !== 'undefined' && _fbDB){
+    observationLogs.length = 0;
     const p1 = _fbDB.ref('observations').once('value').then(snap=>{
       const data=snap.val();
-      if(data){
-        Object.entries(data).forEach(([k,v])=>{
-          observationLogs.push({
-            fbKey:k, source:'observations',
-            studentId:v.studentId, discover:v.discover||'',
-            feeling:v.feeling||'', photos:v.photos||[], audio:v.audio||[],
-            date:new Date(v.ts||Date.now())
-          });
-        });
-      }
+      if(data) Object.entries(data).forEach(([k,v])=>{
+        observationLogs.push({fbKey:k,source:'observations',studentId:v.studentId,discover:v.discover||'',feeling:v.feeling||'',photos:v.photos||[],audio:v.audio||[],date:new Date(v.ts||Date.now())});
+      });
     }).catch(()=>{});
 
     const p2 = _fbDB.ref('memos').once('value').then(snap=>{
       const data=snap.val();
+      if(data) Object.entries(data).forEach(([k,v])=>{
+        observationLogs.push({fbKey:k,source:'memos',studentId:v.studentId,discover:v.text||'',feeling:'',photos:v.photos||[],audio:v.audio||[],date:new Date(v.ts||Date.now())});
+      });
+    }).catch(()=>{});
+
+    const p3 = _fbDB.ref('teacherObs').once('value').then(snap=>{
+      const data=snap.val();
       if(data){
+        teacherObsLogs.length=0;
         Object.entries(data).forEach(([k,v])=>{
-          // memos를 관찰기록 형식으로 변환
-          observationLogs.push({
-            fbKey:k, source:'memos',
-            studentId:v.studentId,
-            discover: v.text||'',  // 텍스트를 발견한 것으로
-            feeling:'',
-            photos:v.photos||[], audio:v.audio||[],
-            date:new Date(v.ts||Date.now())
-          });
+          teacherObsLogs.push({fbKey:k,teacherName:v.teacherName,studentId:v.studentId,content:v.content||'',feeling:v.feeling||'',photos:v.photos||[],date:new Date(v.ts||Date.now())});
         });
+        teacherObsLogs.sort((a,b)=>a.date-b.date);
       }
     }).catch(()=>{});
 
-    Promise.all([p1,p2]).then(()=>{
+    Promise.all([p1,p2,p3]).then(()=>{
       observationLogs.sort((a,b)=>a.date-b.date);
       renderObserveList();
+      renderTeacherObserveList();
     });
   } else {
-    // Firebase 없으면 로컬 memos도 합치기
-    const combined = [...observationLogs];
-    memos.forEach(m=>{
-      if(!combined.find(o=>o.fbKey&&o.source==='memos'&&o.studentId===m.studentId&&o.date-m.date===0)){
-        combined.push({
-          source:'memos', studentId:m.studentId,
-          discover:m.text||'', feeling:'',
-          photos:m.photos||[], audio:m.audio||[],
-          date:m.date
-        });
-      }
-    });
-    combined.sort((a,b)=>a.date-b.date);
-    observationLogs.length=0;
-    combined.forEach(c=>observationLogs.push(c));
     renderObserveList();
+    renderTeacherObserveList();
   }
 }
 let statsChart = {};   // canvas별 Chart 인스턴스
@@ -4969,7 +5180,396 @@ function drawSoundPie(){
 const soundFiles = []; // { id, name, emoji, fileName, url, uploadedAt }
 let soundPickSel = null;  // 선택된 학생 id
 
-/* ====== 관찰기록 탭 ====== */
+function renderMainGallery(){
+  const el = document.getElementById('mainGalleryGrid');
+  if(!el) return;
+  const latest = galleryPhotos.slice(0, 20);
+  if(latest.length===0){
+    el.innerHTML=`<div style="grid-column:1/-1;text-align:center;padding:24px 0;color:var(--ink-soft);font-size:13px">아직 사진이 없어요 📷</div>`;
+    return;
+  }
+  el.innerHTML = latest.map((p,i)=>`
+    <div style="aspect-ratio:1;border-radius:10px;overflow:hidden;cursor:pointer;transition:transform .15s"
+      onclick="openGalleryView(${i})"
+      onmouseover="this.style.transform='scale(1.05)'"
+      onmouseout="this.style.transform=''">
+      <img src="${p.url}" style="width:100%;height:100%;object-fit:cover">
+    </div>`).join('');
+}
+
+/* ====== 갤러리 ====== */
+const galleryPhotos = []; // {url, ts, fbKey}
+let galleryAdminMode = false;
+let galleryViewIdx = 0;
+const GALLERY_ADMIN_PW = '1234'; // 관리자 비밀번호
+
+function toggleGalleryAdmin(){
+  if(galleryAdminMode){
+    galleryAdminMode = false;
+    document.getElementById('galleryAdminArea').style.display = 'none';
+    document.getElementById('galleryAdminBtn').textContent = '🔐 관리자 업로드';
+    document.getElementById('galleryViewDelete').style.display = 'none';
+    renderGalleryGrid();
+    return;
+  }
+  const pw = prompt('관리자 비밀번호를 입력하세요:');
+  if(pw === GALLERY_ADMIN_PW){
+    galleryAdminMode = true;
+    document.getElementById('galleryAdminArea').style.display = 'flex';
+    document.getElementById('galleryAdminBtn').textContent = '🔓 관리자 모드 중 (클릭하면 종료)';
+    document.getElementById('galleryViewDelete').style.display = 'block';
+    renderGalleryGrid();
+  } else if(pw !== null){
+    alert('비밀번호가 틀렸어요!');
+  }
+}
+
+async function uploadGalleryPhotos(input){
+  const files = Array.from(input.files);
+  if(!files.length) return;
+  const statusEl = document.getElementById('galleryUploadStatus');
+  statusEl.textContent = `☁️ ${files.length}장 업로드 중...`;
+
+  for(let i=0; i<files.length; i++){
+    try {
+      const reader = new FileReader();
+      const dataUrl = await new Promise(res=>{ reader.onload=e=>res(e.target.result); reader.readAsDataURL(files[i]); });
+      const url = await uploadToCloudinary(dataUrl, 'gallery');
+      const entry = { url, ts: Date.now() };
+
+      // Firebase 저장
+      if(typeof _fbDB !== 'undefined' && _fbDB){
+        const ref = await _fbDB.ref('gallery').push(entry);
+        entry.fbKey = ref.key;
+      }
+      galleryPhotos.unshift(entry);
+      statusEl.textContent = `☁️ ${i+1}/${files.length}장 완료...`;
+      renderGalleryGrid();
+    } catch(e){ console.error('갤러리 업로드 오류:', e); }
+  }
+  statusEl.textContent = `✅ ${files.length}장 업로드 완료!`;
+  setTimeout(()=>{ statusEl.textContent=''; }, 3000);
+  input.value = '';
+}
+
+function renderGalleryGrid(){
+  const el = document.getElementById('galleryGrid');
+  if(!el) return;
+  if(galleryPhotos.length===0){
+    el.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:60px 0;color:var(--ink-soft);font-size:13px">
+      아직 사진이 없어요 📷<br><span style="font-size:12px">관리자 모드에서 사진을 추가해보세요!</span></div>`;
+    return;
+  }
+  el.innerHTML = galleryPhotos.map((p,i)=>`
+    <div style="position:relative;aspect-ratio:1;overflow:hidden;border-radius:12px;cursor:pointer;
+      box-shadow:0 2px 8px rgba(0,0,0,.1);transition:transform .15s"
+      onclick="openGalleryView(${i})"
+      onmouseover="this.style.transform='scale(1.03)'"
+      onmouseout="this.style.transform=''">
+      <img src="${p.url}" style="width:100%;height:100%;object-fit:cover">
+      ${galleryAdminMode?`<button onclick="event.stopPropagation();deleteGalleryPhotoByIdx(${i})"
+        style="position:absolute;top:4px;right:4px;background:#E94F33;border:none;border-radius:50%;
+        width:24px;height:24px;color:#fff;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center">✕</button>`:''}
+    </div>`).join('');
+}
+
+function openGalleryView(idx){
+  galleryViewIdx = idx;
+  const modal = document.getElementById('galleryViewModal');
+  const img = document.getElementById('galleryViewImg');
+  modal.style.display = 'flex';
+  img.src = galleryPhotos[idx].url;
+  document.getElementById('galleryViewDelete').style.display = galleryAdminMode ? 'block' : 'none';
+}
+
+function closeGalleryView(){
+  document.getElementById('galleryViewModal').style.display = 'none';
+}
+
+function galleryViewNav(dir){
+  galleryViewIdx = (galleryViewIdx + dir + galleryPhotos.length) % galleryPhotos.length;
+  document.getElementById('galleryViewImg').src = galleryPhotos[galleryViewIdx].url;
+}
+
+function deleteGalleryPhoto(){
+  deleteGalleryPhotoByIdx(galleryViewIdx);
+  closeGalleryView();
+}
+
+function deleteGalleryPhotoByIdx(idx){
+  if(!confirm('이 사진을 삭제할까요?')) return;
+  const p = galleryPhotos[idx];
+  if(p.fbKey && typeof _fbDB !== 'undefined' && _fbDB){
+    _fbDB.ref(`gallery/${p.fbKey}`).remove().catch(()=>{});
+  }
+  galleryPhotos.splice(idx, 1);
+  renderGalleryGrid();
+}
+
+function initGalleryScreen(){
+  // Firebase에서 갤러리 사진 불러오기
+  if(typeof _fbDB !== 'undefined' && _fbDB){
+    galleryPhotos.length = 0;
+    _fbDB.ref('gallery').orderByChild('ts').once('value').then(snap=>{
+      const data = snap.val();
+      if(data){
+        Object.entries(data).reverse().forEach(([k,v])=>{
+          galleryPhotos.push({fbKey:k, url:v.url, ts:v.ts});
+        });
+      }
+      renderGalleryGrid();
+      renderMainGallery();
+    }).catch(()=>{ renderGalleryGrid(); renderMainGallery(); });
+  } else {
+    renderGalleryGrid();
+    renderMainGallery();
+  }
+}
+
+/* ====== 관찰기록 탭 전환 ====== */
+function switchObsTab(tab){
+  ['student','teacher'].forEach(t=>{
+    const btn = document.getElementById(`obsTab-${t}`);
+    const pan = document.getElementById(`obsPanel-${t}`);
+    const active = t===tab;
+    if(btn){
+      btn.style.borderBottomColor = active ? 'var(--accent)' : 'transparent';
+      btn.style.color = active ? 'var(--accent)' : 'var(--ink-soft)';
+    }
+    if(pan) pan.style.display = active ? 'block' : 'none';
+  });
+  if(tab==='teacher') renderTeacherObsPick();
+}
+
+/* ====== 소리산책 MP3 업로드 (관찰기록 탭 내) ====== */
+let obsSoundFile = null;
+function handleObsSoundUpload(input){
+  const file = input.files[0];
+  if(!file) return;
+  obsSoundFile = file;
+  const url = URL.createObjectURL(file);
+  const preview = document.getElementById('obsSoundPreview');
+  if(preview){
+    preview.innerHTML = `<div style="background:#FFF8F2;border:1.5px solid #E07A3C;border-radius:10px;padding:8px 12px;display:flex;align-items:center;gap:8px">
+      <audio controls src="${url}" style="flex:1;height:32px"></audio>
+      <button onclick="obsSoundFile=null;document.getElementById('obsSoundInput').value='';document.getElementById('obsSoundPreview').innerHTML=''"
+        style="background:none;border:none;color:#E94F33;cursor:pointer;font-size:16px">🗑️</button>
+    </div>`;
+  }
+}
+
+/* ====== 교사 관찰 기록 ====== */
+const teacherObsLogs = [];
+let teacherObsPickSel = null;
+let teacherObsPhotoFiles = [];
+
+function renderTeacherObsPick(){
+  const el = document.getElementById('teacherObsPick');
+  if(!el) return;
+  el.innerHTML = students.map(s=>{
+    const sel = teacherObsPickSel===s.id;
+    return `<button onclick="selectTeacherObsPick('${s.id}')"
+      style="background:${sel?'var(--sky)':'#fff'};color:${sel?'#fff':'var(--ink)'};
+      border:1.5px solid ${sel?'var(--sky)':'var(--line)'};border-radius:12px;
+      padding:8px 4px;font-family:inherit;font-size:13px;cursor:pointer;
+      display:flex;flex-direction:column;align-items:center;gap:3px">
+      <span style="font-size:20px">${s.emoji}</span>
+      <span style="font-size:11px;font-weight:700">${s.id}</span>
+    </button>`;
+  }).join('');
+}
+
+function selectTeacherObsPick(id){
+  teacherObsPickSel = teacherObsPickSel===id ? null : id; // 다시 누르면 해제
+  renderTeacherObsPick();
+}
+
+let teacherSoundFile = null;
+let teacherMediaRecorder = null;
+let teacherAudioChunks = [];
+let teacherAudioFiles = [];
+let teacherRecording = false;
+let teacherRecInterval = null;
+let teacherRecSeconds = 0;
+
+function handleTeacherSoundUpload(input){
+  const file = input.files[0];
+  if(!file) return;
+  teacherSoundFile = file;
+  const url = URL.createObjectURL(file);
+  const preview = document.getElementById('teacherSoundPreview');
+  if(preview){
+    preview.innerHTML = `<div style="background:#FFF8F2;border:1.5px solid #E07A3C;border-radius:10px;padding:8px 12px;display:flex;align-items:center;gap:8px">
+      <audio controls src="${url}" style="flex:1;height:32px"></audio>
+      <button onclick="teacherSoundFile=null;document.getElementById('teacherSoundInput').value='';document.getElementById('teacherSoundPreview').innerHTML=''"
+        style="background:none;border:none;color:#E94F33;cursor:pointer;font-size:16px">🗑️</button>
+    </div>`;
+  }
+}
+
+function toggleTeacherRecording(){
+  if(!teacherRecording){ startTeacherRecording(); } else { stopTeacherRecording(); }
+}
+
+async function startTeacherRecording(){
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({audio:true});
+    teacherAudioChunks=[];
+    teacherMediaRecorder = new MediaRecorder(stream);
+    teacherMediaRecorder.ondataavailable = e=>{ if(e.data.size>0) teacherAudioChunks.push(e.data); };
+    teacherMediaRecorder.onstop = ()=>{
+      const blob = new Blob(teacherAudioChunks,{type:'audio/webm'});
+      const url = URL.createObjectURL(blob);
+      const name = `교사녹음_${new Date().toLocaleTimeString('ko-KR')}.webm`;
+      teacherAudioFiles.push({blob,url,name});
+      renderTeacherAudioList();
+      stream.getTracks().forEach(t=>t.stop());
+    };
+    teacherMediaRecorder.start();
+    teacherRecording=true; teacherRecSeconds=0;
+    const btn=document.getElementById('teacherRecBtn');
+    const timer=document.getElementById('teacherRecTimer');
+    if(btn){btn.textContent='⏹️ 녹음 중지';btn.style.background='#E94F33';}
+    teacherRecInterval=setInterval(()=>{
+      teacherRecSeconds++;
+      const m=Math.floor(teacherRecSeconds/60), s=teacherRecSeconds%60;
+      if(timer) timer.textContent=`${m}:${String(s).padStart(2,'0')}`;
+    },1000);
+  } catch(e){ alert('마이크 권한이 필요해요.'); }
+}
+
+function stopTeacherRecording(){
+  if(teacherMediaRecorder&&teacherRecording) teacherMediaRecorder.stop();
+  teacherRecording=false;
+  clearInterval(teacherRecInterval);
+  const btn=document.getElementById('teacherRecBtn');
+  const timer=document.getElementById('teacherRecTimer');
+  if(btn){btn.textContent='🎙️ 녹음 시작';btn.style.background='var(--warm)';}
+  if(timer) timer.textContent='';
+}
+
+function renderTeacherAudioList(){
+  const el=document.getElementById('teacherAudioList');
+  if(!el) return;
+  el.innerHTML=teacherAudioFiles.map((f,i)=>`
+    <div style="background:#FFF8F0;border:1.5px solid #F5D9BC;border-radius:10px;padding:8px 12px;display:flex;align-items:center;gap:8px">
+      <audio controls src="${f.url}" style="flex:1;height:32px"></audio>
+      <button onclick="URL.revokeObjectURL(teacherAudioFiles[${i}].url);teacherAudioFiles.splice(${i},1);renderTeacherAudioList()"
+        style="background:none;border:none;color:#E94F33;cursor:pointer;font-size:16px">🗑️</button>
+    </div>`).join('');
+}
+
+function teacherObsPreviewPhotos(input){
+  teacherObsPhotoFiles = Array.from(input.files);
+  const preview = document.getElementById('teacherObsPhotoPreview');
+  if(!preview) return;
+  preview.innerHTML = '';
+  teacherObsPhotoFiles.forEach((file,i)=>{
+    const reader = new FileReader();
+    reader.onload = e=>{
+      const div = document.createElement('div');
+      div.style.cssText='position:relative;width:80px;height:80px';
+      div.innerHTML=`<img src="${e.target.result}" style="width:80px;height:80px;object-fit:cover;border-radius:8px;border:2px solid var(--line)">
+        <button onclick="teacherObsPhotoFiles.splice(${i},1);this.parentElement.remove()" style="position:absolute;top:-5px;right:-5px;background:#E94F33;color:#fff;border:none;border-radius:50%;width:18px;height:18px;font-size:11px;cursor:pointer">✕</button>`;
+      preview.appendChild(div);
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+async function saveTeacherObservation(){
+  const name = (document.getElementById('teacherObsName').value||'').trim();
+  const content = (document.getElementById('teacherObsContent').value||'').trim();
+  const feeling = (document.getElementById('teacherObsFeeling').value||'').trim();
+  if(!name){ alert('교사 이름을 입력해주세요!'); return; }
+  if(!content && !feeling){ alert('관찰 내용 또는 느낀 점을 입력해주세요!'); return; }
+
+  const folder = 'teacher_obs';
+  const photoUrls = await Promise.all(teacherObsPhotoFiles.map(async f=>{
+    const r = await new Promise(res=>{const fr=new FileReader();fr.onload=e=>res(e.target.result);fr.readAsDataURL(f);});
+    return uploadToCloudinary(r, folder).catch(()=>r);
+  }));
+
+  // 녹음 파일 업로드
+  const audioUrls = await Promise.all(teacherAudioFiles.map(async a=>{
+    const url = await uploadToCloudinary(a.blob, folder).catch(()=>null);
+    return url ? {url, name:a.name} : {url:a.url, name:a.name};
+  }));
+
+  // MP3 소리산책 업로드
+  let soundUrl = null;
+  if(teacherSoundFile){
+    const r = await new Promise(res=>{const fr=new FileReader();fr.onload=e=>res(e.target.result);fr.readAsDataURL(teacherSoundFile);});
+    soundUrl = await uploadToCloudinary(r, folder).catch(()=>null);
+  }
+
+  const now = new Date();
+  const entry = {
+    teacherName: name, studentId: teacherObsPickSel || '전체',
+    content, feeling, photos: photoUrls, audio: audioUrls,
+    sound: soundUrl, date: now
+  };
+
+  teacherObsLogs.push(entry);
+
+  if(typeof _fbDB !== 'undefined' && _fbDB){
+    _fbDB.ref('teacherObs').push({
+      teacherName: name, studentId: teacherObsPickSel||'전체',
+      content, feeling, photos: photoUrls, audio: audioUrls,
+      sound: soundUrl, ts: now.getTime()
+    }).catch(()=>{});
+  }
+
+  renderTeacherObserveList();
+
+  // 초기화
+  document.getElementById('teacherObsName').value='';
+  document.getElementById('teacherObsContent').value='';
+  document.getElementById('teacherObsFeeling').value='';
+  document.getElementById('teacherObsPhotoPreview').innerHTML='';
+  document.getElementById('teacherAudioList').innerHTML='';
+  document.getElementById('teacherSoundPreview').innerHTML='';
+  document.getElementById('teacherSoundInput').value='';
+  teacherObsPhotoFiles=[];
+  teacherObsPickSel=null;
+  teacherAudioFiles=[];
+  teacherSoundFile=null;
+  renderTeacherObsPick();
+  alert(`✅ 교사 관찰 기록이 저장됐어요!`);
+}
+
+function renderTeacherObserveList(){
+  const el = document.getElementById('teacherObserveList');
+  if(!el) return;
+  if(teacherObsLogs.length===0){
+    el.innerHTML=`<div style="text-align:center;color:var(--ink-soft);font-size:13px;padding:40px 0">아직 교사 관찰 기록이 없어요 📝<br><span style="font-size:12px">첫 번째 기록을 남겨보세요!</span></div>`;
+    return;
+  }
+  el.innerHTML=[...teacherObsLogs].reverse().map(m=>{
+    const d=m.date instanceof Date?m.date:new Date(m.date);
+    const ds=`${d.getMonth()+1}/${d.getDate()} ${d.getHours()}:${String(d.getMinutes()).padStart(2,'0')}`;
+    const s=students.find(x=>x.id===m.studentId);
+    return `<div style="background:#F6F8FA;border:1.5px solid var(--line);border-radius:14px;padding:14px;margin-bottom:10px">
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;flex-wrap:wrap">
+        <span style="background:#E8F4FB;border-radius:999px;padding:3px 10px;font-size:12px;font-weight:700;color:#3F8AA6">👩‍🏫 ${m.teacherName}</span>
+        <span style="font-size:13px;color:var(--ink-soft)">→ ${s?s.emoji:''}${m.studentId}</span>
+        <span style="margin-left:auto;font-size:11px;color:var(--ink-soft)">${ds}</span>
+      </div>
+      ${m.content?`<div style="font-size:12px;font-weight:800;color:#3F8AA6;margin-bottom:3px">📝 관찰 내용</div><div style="font-size:13px;line-height:1.6;margin-bottom:8px;white-space:pre-wrap">${m.content}</div>`:''}
+      ${m.feeling?`<div style="font-size:12px;font-weight:800;color:var(--warm);margin-bottom:3px">💭 느낀 점</div><div style="font-size:13px;line-height:1.6;margin-bottom:8px;white-space:pre-wrap">${m.feeling}</div>`:''}
+      ${m.photos&&m.photos.length?`<div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:6px">
+        ${m.photos.map(p=>`<img src="${p}" style="width:72px;height:72px;object-fit:cover;border-radius:8px;cursor:pointer;border:1.5px solid var(--line)" onclick="viewMemoPhoto('${p}')">`).join('')}
+      </div>`:''}
+      ${m.audio&&m.audio.length?`<div style="display:flex;flex-direction:column;gap:4px;margin-bottom:6px">
+        ${m.audio.map(a=>`<audio controls src="${a.url}" style="width:100%;height:32px"></audio>`).join('')}
+      </div>`:''}
+      ${m.sound?`<div style="display:flex;align-items:center;gap:6px;background:#FFF8F2;border-radius:8px;padding:6px 10px">
+        <span style="font-size:14px">🎧</span>
+        <audio controls src="${m.sound}" style="flex:1;height:28px"></audio>
+      </div>`:''}
+    </div>`;
+  }).join('');
+}
 let obsPickSel = null;
 let obsPhotoFiles = [];
 let obsCameraPhotos = [];
@@ -5004,9 +5604,11 @@ function selectObsPick(id){
   renderObservePick();
   const area = document.getElementById('observeInputArea');
   const nameEl = document.getElementById('observePickName');
+  const soundLabel = document.getElementById('obsSoundLabelText');
   const s = students.find(x=>x.id===id);
   if(area) area.style.display='block';
   if(nameEl) nameEl.textContent = `${s?s.emoji:''} ${id}의 관찰 기록`;
+  if(soundLabel) soundLabel.textContent = `${id}의 소리산책 — MP3 파일 선택`;
 }
 
 function obsPreviewPhotos(input){
