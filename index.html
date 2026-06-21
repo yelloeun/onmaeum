@@ -2128,10 +2128,13 @@ function triggerPWAInstall(){
           <div id="reportPrintArea" style="background:#fff;border:1px solid var(--line);border-radius:14px;padding:0;overflow:hidden;max-width:680px;margin:0 auto">
 
             <!-- 헤더 이미지 -->
-            <img id="reportHeaderImg" src="https://res.cloudinary.com/dukzrwvx6/image/upload/v1/assets/4500900.png"
-              style="width:100%;display:block"
-              onerror="this.style.display='none'"
-              alt="남평행복프로젝트 헤더">
+            <div id="reportHeaderWrap" style="width:100%;background:#f5f2ea;min-height:60px">
+              <img id="reportHeaderImg" src="https://res.cloudinary.com/dukzrwvx6/image/upload/f_auto,q_auto/%EC%A7%80%EA%B5%AC_%EC%98%A8_On_%EB%8F%84_%EB%82%AE%EC%B6%94%EB%8A%94_%EC%98%A8_%E6%BA%AB_%EB%A7%88%EC%9D%8C_qwmzrr.png"
+                style="width:100%;display:block"
+                onload="document.getElementById('reportHeaderWrap').style.minHeight='0'"
+                onerror="this.style.display='none'"
+                alt="남평행복프로젝트 헤더">
+            </div>
 
             <div style="text-align:center;padding:8px 20px;border-bottom:1px solid #e0e0e0">
               <div style="font-size:13px;font-weight:700;color:#3B6D11">2026학년도 남평행복프로젝트 온(溫)마음(音) 1학기 성장 안내장</div>
@@ -2175,7 +2178,7 @@ function triggerPWAInstall(){
               <div style="border-radius:10px;padding:14px;margin-bottom:10px;border:1px solid #e0e0e0">
                 <div style="font-size:11px;color:#888;margin-bottom:6px;display:flex;align-items:center;justify-content:space-between">
                   <span>선생님의 한마디</span>
-                  <button onclick="generateReportComment()" id="regenBtn"
+                  <button onclick="document.getElementById('reportComment').value='✨ 생성 중이에요...';generateReportComment()" id="regenBtn"
                     style="font-size:11px;color:#3F8AA6;background:none;border:1px solid #c0d8e8;border-radius:999px;padding:3px 10px;cursor:pointer">
                     🔄 다시 생성
                   </button>
@@ -3576,12 +3579,14 @@ async function generateReportComment(){
 최근 관찰 기록: "${obsText}"
 인성검사 제출: ${d1?'완료':'미제출'}${d1&&d3?' / 향상됨':''}
 
-조건:
-- 따뜻하고 구체적인 문체로 4~6문장 작성 (A4 여백 채울 분량)
-- 아이의 이름을 자연스럽게 포함
-- "AI" "자동 생성" 같은 표현 절대 금지
-- 학부모가 읽을 공식 안내문 스타일
-- 방학 응원 메시지로 마무리`;
+[반드시 지켜야 할 조건]
+1. 반드시 7~9문장으로 작성하세요. 짧으면 안 됩니다.
+2. 아이가 참여한 활동(자연탐구, 잔반줄이기, 관찰기록, 인성 등)을 구체적으로 언급하세요.
+3. 아이의 이름을 2~3번 자연스럽게 포함하세요.
+4. 학부모가 읽기 좋은 따뜻하고 공식적인 문체로 쓰세요.
+5. "AI", "자동 생성", "데이터" 같은 표현은 절대 쓰지 마세요.
+6. 마지막 문장은 반드시 방학 동안의 응원과 2학기 기대감으로 마무리하세요.
+7. 문단 나누기 없이 하나의 연속된 문단으로 작성하세요.`;
 
   try {
     const resp=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:600,messages:[{role:'user',content:prompt}]})});
