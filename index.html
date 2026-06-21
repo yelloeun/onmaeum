@@ -3561,37 +3561,52 @@ async function generateReportComment(){
   const total=sLogs.reduce((a,b)=>a+(b.points||0),0);
   const cats={nature:0,life:0,sound:0,heart:0};
   sLogs.forEach(l=>{ if(cats[l.category]!==undefined) cats[l.category]+=l.points||0; });
-  const topCat=Object.entries(cats).sort((a,b)=>b[1]-a[1])[0]?.[0]||'nature';
-  const catNames={nature:'자연 탐구',life:'생명 존중',sound:'소리 감수성',heart:'마음 인성'};
+  const topCats=Object.entries(cats).sort((a,b)=>b[1]-a[1]).filter(c=>c[1]>0).slice(0,2).map(c=>({nature:'자연 탐구',life:'생명 존중',sound:'소리 감수성',heart:'마음 인성'}[c[0]]));
   const janban=allLogs.filter(l=>l.studentId===reportStudent&&l.type==='janban');
   const zero=janban.filter(l=>(l.weight||0)===0).length;
-  const obs=observationLogs.filter(o=>o.studentId===reportStudent).slice(-1)[0];
-  const obsText=obs?(obs.discover||obs.text||''):'';
+  const avg=janban.length?Math.round(janban.reduce((a,b)=>a+(b.weight||0),0)/janban.length):0;
+  const fruit=janban.filter(l=>(l.weight||0)<100).length;
+  const obsAll=observationLogs.filter(o=>o.studentId===reportStudent);
+  const obsTexts=obsAll.slice(-2).map(o=>o.discover||o.text||o.feeling||'').filter(Boolean);
   const d1=kediData[`${reportStudent}_1`];
   const d3=kediData[`${reportStudent}_3`]||kediData[`${reportStudent}_2`];
+  const kediGrown = d1&&d3 ? '인성검사 결과 전반적으로 향상됨' : d1 ? '인성검사 1회차 완료' : '';
 
-  const prompt=`당신은 유치원/초등학교 담임 선생님입니다. 아래 데이터를 바탕으로 학부모께 드리는 1학기 성장 안내장의 "선생님의 한마디" 문단을 작성해 주세요.
+  const prompt=`당신은 초등학교/유치원 담임 선생님입니다.
+아래 데이터를 바탕으로 학부모께 드리는 1학기 성장 안내장에 들어갈 "선생님의 한마디"를 작성하세요.
 
-학생 이름: ${s.fullId||s.id}
-총 온포인트: ${total}점
-가장 활발한 영역: ${catNames[topCat]}
-잔반 0g 달성: ${zero}회
-최근 관찰 기록: "${obsText}"
-인성검사 제출: ${d1?'완료':'미제출'}${d1&&d3?' / 향상됨':''}
+[학생 정보]
+- 이름: ${s.fullId||s.id}
+- 학년: ${s.grade}
+- 총 온(溫)포인트: ${total}점
+- 주요 활동 영역: ${topCats.join(', ')||'다양한 영역'}
+- 잔반 측정 횟수: ${janban.length}회, 평균 잔반량: ${avg}g, 0g 달성: ${zero}회, 열매: ${fruit}개
+- 관찰 기록: ${obsTexts.length>0?obsTexts.map(t=>`"${t}"`).join(' / '):'기록 없음'}
+- ${kediGrown}
 
-[반드시 지켜야 할 조건]
-1. 반드시 7~9문장으로 작성하세요. 짧으면 안 됩니다.
-2. 아이가 참여한 활동(자연탐구, 잔반줄이기, 관찰기록, 인성 등)을 구체적으로 언급하세요.
-3. 아이의 이름을 2~3번 자연스럽게 포함하세요.
-4. 학부모가 읽기 좋은 따뜻하고 공식적인 문체로 쓰세요.
-5. "AI", "자동 생성", "데이터" 같은 표현은 절대 쓰지 마세요.
-6. 마지막 문장은 반드시 방학 동안의 응원과 2학기 기대감으로 마무리하세요.
-7. 문단 나누기 없이 하나의 연속된 문단으로 작성하세요.`;
+[작성 규칙 - 반드시 지키세요]
+1. 정확히 5~6문장으로 작성하세요. 짧으면 절대 안 됩니다.
+2. 첫 문장: 이 학생의 가장 두드러진 성장 모습 소개
+3. 중간 2~3문장: 구체적인 활동(잔반줄이기, 자연탐구, 관찰기록, 인성 등) 언급
+4. 마지막 문장: 방학 동안의 응원과 2학기 기대감
+5. 아이 이름을 2번 이상 자연스럽게 포함
+6. "AI", "데이터", "자동" 같은 표현 절대 금지
+7. 공식적이지만 따뜻한 편지 형식
+8. 문단 없이 하나의 연속된 문단으로`;
 
   try {
-    const resp=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:600,messages:[{role:'user',content:prompt}]})});
+    const resp=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-6',
+        max_tokens:800,
+        messages:[{role:'user',content:prompt}]
+      })
+    });
     const data=await resp.json();
-    document.getElementById('reportComment').value=data.content?.[0]?.text||'직접 입력해 주세요.';
+    const text=data.content?.[0]?.text||'';
+    document.getElementById('reportComment').value=text||'직접 입력해 주세요.';
   } catch(e){
     document.getElementById('reportComment').value=`${s.fullId||s.id}는 이번 학기 다양한 활동에 성실하게 참여하며 의미 있는 성장을 이루었습니다. 직접 내용을 입력해 주세요.`;
   }
@@ -3621,7 +3636,25 @@ function toggleReportPhoto(idx){
   if(selEl) selEl.innerHTML=reportSelectedPhotos.map(u=>`<div style="aspect-ratio:1;border-radius:8px;overflow:hidden;border:1px solid #e0e0e0"><img src="${u}" style="width:100%;height:100%;object-fit:cover"></div>`).join('');
 }
 
-function printReport(){ window.print(); }
+function printReport(){
+  const content = document.getElementById('reportPrintArea').innerHTML;
+  const win = window.open('', '_blank');
+  win.document.write(`<!DOCTYPE html><html><head>
+    <meta charset="UTF-8">
+    <title>성장 안내장</title>
+    <style>
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      body { font-family: 'Malgun Gothic', '맑은 고딕', sans-serif; }
+      @page { size: A4 portrait; margin: 0; }
+      @media print { body { margin: 0; } }
+      img { max-width: 100%; display: block; }
+      textarea { border: none; resize: none; width: 100%; font-family: inherit; font-size: 13px; line-height: 1.8; color: #2F3A2E; background: transparent; }
+    </style>
+  </head><body>${content}</body></html>`);
+  win.document.close();
+  win.focus();
+  setTimeout(()=>{ win.print(); }, 800);
+}
 
 function resetReport(){
   reportStudent=null; reportSelectedPhotos=[];
