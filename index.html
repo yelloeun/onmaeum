@@ -3572,27 +3572,26 @@ async function generateReportComment(){
   const d3=kediData[`${reportStudent}_3`]||kediData[`${reportStudent}_2`];
   const kediGrown = d1&&d3 ? '인성검사 결과 전반적으로 향상됨' : d1 ? '인성검사 1회차 완료' : '';
 
-  const prompt=`당신은 초등학교/유치원 담임 선생님입니다.
-아래 데이터를 바탕으로 학부모께 드리는 1학기 성장 안내장에 들어갈 "선생님의 한마디"를 작성하세요.
+  const prompt=`학부모께 드리는 1학기 성장 안내장의 "선생님의 한마디"를 작성하세요.
 
 [학생 정보]
-- 이름: ${s.fullId||s.id}
-- 학년: ${s.grade}
+- 이름: ${s.fullId||s.id} (${s.grade})
 - 총 온(溫)포인트: ${total}점
 - 주요 활동 영역: ${topCats.join(', ')||'다양한 영역'}
-- 잔반 측정 횟수: ${janban.length}회, 평균 잔반량: ${avg}g, 0g 달성: ${zero}회, 열매: ${fruit}개
-- 관찰 기록: ${obsTexts.length>0?obsTexts.map(t=>`"${t}"`).join(' / '):'기록 없음'}
-- ${kediGrown}
+- 잔반: 총 ${janban.length}회 측정, 평균 ${avg}g, 0g 달성 ${zero}회, 열매 ${fruit}개
+- 아이의 관찰 기록: ${obsTexts.length>0?obsTexts.map(t=>`"${t}"`).join(' / '):'없음'}
+- 인성검사: ${kediGrown||'미제출'}
 
-[작성 규칙 - 반드시 지키세요]
-1. 정확히 5~6문장으로 작성하세요. 짧으면 절대 안 됩니다.
-2. 첫 문장: 이 학생의 가장 두드러진 성장 모습 소개
-3. 중간 2~3문장: 구체적인 활동(잔반줄이기, 자연탐구, 관찰기록, 인성 등) 언급
-4. 마지막 문장: 방학 동안의 응원과 2학기 기대감
-5. 아이 이름을 2번 이상 자연스럽게 포함
-6. "AI", "데이터", "자동" 같은 표현 절대 금지
-7. 공식적이지만 따뜻한 편지 형식
-8. 문단 없이 하나의 연속된 문단으로`;
+[예시 - 이런 형식과 분량으로 작성하세요]
+"○○는 이번 학기 자연과 생명을 사랑하는 마음이 한층 더 깊어졌습니다. 텃밭에서 식물을 가꾸고 병아리를 돌보는 활동에서 생명의 소중함을 직접 몸으로 느끼며, 관찰한 것들을 꼼꼼히 기록하는 습관도 길러졌습니다. 특히 잔반 줄이기 활동에서 꾸준한 노력을 보여 주었으며, 친구들과 함께하는 협력 활동에서도 따뜻한 배려심을 발휘하였습니다. 인성 영역에서도 눈에 띄는 성장이 있어, 스스로를 돌아보고 주변을 배려하는 모습이 더욱 성숙해졌습니다. 이번 여름방학 동안에도 주변의 자연과 생명에 관심을 가지며 즐거운 시간을 보내길 바라며, 2학기에 더욱 성장한 ○○의 모습을 기대합니다."
+
+[규칙]
+1. 위 예시와 비슷한 분량(5~6문장)으로 작성
+2. 학생 이름을 2회 이상 포함
+3. 실제 활동(잔반, 관찰기록, 인성검사 등) 구체적으로 언급
+4. "AI", "데이터" 표현 절대 금지
+5. 따뜻하고 공식적인 편지 형식
+6. 하나의 연속된 문단으로`;
 
   try {
     const resp=await fetch('https://api.anthropic.com/v1/messages',{
@@ -3600,7 +3599,8 @@ async function generateReportComment(){
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
         model:'claude-sonnet-4-6',
-        max_tokens:800,
+        max_tokens:1000,
+        system:'당신은 초등학교/유치원 담임 선생님입니다. 학부모께 드리는 따뜻하고 공식적인 성장 안내장 문구를 작성합니다. 반드시 5~6문장으로 작성하며, 짧게 쓰는 것은 절대 안 됩니다.',
         messages:[{role:'user',content:prompt}]
       })
     });
@@ -3637,23 +3637,66 @@ function toggleReportPhoto(idx){
 }
 
 function printReport(){
-  const content = document.getElementById('reportPrintArea').innerHTML;
+  const el = document.getElementById('reportPrintArea');
+  // 인쇄 전 사진 선택 UI 숨기기
+  const pickEl = document.getElementById('reportPhotoPick');
+  const pickLabel = pickEl?.previousElementSibling;
+  if(pickEl) pickEl.style.display='none';
+  if(pickLabel) pickLabel.style.display='none';
+
+  const content = el.innerHTML;
+
+  // 원래대로 복구
+  if(pickEl) pickEl.style.display='flex';
+  if(pickLabel) pickLabel.style.display='block';
+
   const win = window.open('', '_blank');
   win.document.write(`<!DOCTYPE html><html><head>
     <meta charset="UTF-8">
     <title>성장 안내장</title>
     <style>
       * { box-sizing: border-box; margin: 0; padding: 0; }
-      body { font-family: 'Malgun Gothic', '맑은 고딕', sans-serif; }
+      body {
+        font-family: 'Malgun Gothic', '맑은 고딕', sans-serif;
+        width: 210mm;
+        min-height: 297mm;
+        margin: 0 auto;
+        padding: 12mm 15mm;
+        background: #fff;
+      }
       @page { size: A4 portrait; margin: 0; }
-      @media print { body { margin: 0; } }
       img { max-width: 100%; display: block; }
-      textarea { border: none; resize: none; width: 100%; font-family: inherit; font-size: 13px; line-height: 1.8; color: #2F3A2E; background: transparent; }
+      textarea {
+        border: none; resize: none; width: 100%;
+        font-family: inherit; font-size: 13px;
+        line-height: 1.9; color: #2F3A2E;
+        background: transparent; min-height: 120px;
+      }
+      /* 사진 선택 UI 숨기기 */
+      #reportPhotoPick, [style*="갤러리에서 선택"] { display: none !important; }
+      /* 사진 그리드 크게 */
+      #reportPhotoSelected {
+        display: grid !important;
+        grid-template-columns: repeat(4, 1fr) !important;
+        gap: 8px !important;
+      }
+      #reportPhotoSelected div {
+        aspect-ratio: 1;
+        border-radius: 8px;
+        overflow: hidden;
+      }
+      #reportPhotoSelected img {
+        width: 100%; height: 100%; object-fit: cover;
+      }
+      /* 다시생성 버튼 숨기기 */
+      #regenBtn { display: none !important; }
+      /* 각 섹션 간격 */
+      .report-section { margin-bottom: 10px; }
     </style>
   </head><body>${content}</body></html>`);
   win.document.close();
   win.focus();
-  setTimeout(()=>{ win.print(); }, 800);
+  setTimeout(()=>{ win.print(); }, 1000);
 }
 
 function resetReport(){
