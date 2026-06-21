@@ -2106,6 +2106,23 @@ function triggerPWAInstall(){
         </div>
       </div>
 
+      <!-- 교사 관찰기록 전체 -->
+      <div class="tpanel" style="grid-column:1 / -1">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+          <h3 style="margin:0">👩‍🏫 교사 관찰기록 전체</h3>
+          <select id="teacherObsFilter" onchange="renderTeacherObsPanel()"
+            style="border:1.5px solid var(--line);border-radius:10px;padding:6px 12px;
+            font-family:inherit;font-size:12px;background:#fff;cursor:pointer">
+            <option value="all">전체</option>
+          </select>
+        </div>
+        <div id="teacherObsPanelList">
+          <div style="text-align:center;color:var(--ink-soft);font-size:13px;padding:32px">
+            아직 교사 관찰기록이 없어요 👩‍🏫
+          </div>
+        </div>
+      </div>
+
       <!-- 인성검사 누계 패널 -->
       <div class="tpanel" style="grid-column:1 / -1" id="teacherKediPanel">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;flex-wrap:wrap;gap:8px">
@@ -3084,6 +3101,20 @@ function loadFromSheet(){
     });
     memos.sort((a,b)=>a.date-b.date);
 
+    // ── 교사 관찰기록 불러오기 ──
+    _fbDB.ref('teacherObs').once('value').then(snap=>{
+      const data = snap.val();
+      if(data){
+        teacherObsLogs.length = 0;
+        Object.entries(data).forEach(([k,v])=>{
+          teacherObsLogs.push({fbKey:k, teacherName:v.teacherName, studentId:v.studentId,
+            content:v.content||'', feeling:v.feeling||'', photos:v.photos||[],
+            audio:v.audio||[], sound:v.sound||null, date:new Date(v.ts||Date.now())});
+        });
+        teacherObsLogs.sort((a,b)=>a.date-b.date);
+      }
+    }).catch(()=>{});
+
     // ── UI 갱신 ──
     renderStudents();
     renderStats();
@@ -3258,6 +3289,7 @@ function goto(name){
   window.scrollTo(0,0);
   if(name==='teacher') renderTeacher();
   if(name==='teacher') renderTeacherMemos();
+  if(name==='teacher') renderTeacherObsPanel();
   if(name==='janban')  renderPick();
   if(name==='sound')   initSoundScreen();
   if(name==='kedi')    initKedi();
@@ -5574,6 +5606,17 @@ async function saveTeacherObservation(){
   alert(`✅ 교사 관찰 기록이 저장됐어요!`);
 }
 
+function deleteTeacherObs(idx){
+  if(!confirm('이 교사 관찰 기록을 삭제할까요?')) return;
+  if(idx < 0 || idx >= teacherObsLogs.length) return;
+  const m = teacherObsLogs[idx];
+  if(m.fbKey && typeof _fbDB !== 'undefined' && _fbDB){
+    _fbDB.ref(`teacherObs/${m.fbKey}`).remove().catch(()=>{});
+  }
+  teacherObsLogs.splice(idx, 1);
+  renderTeacherObserveList();
+}
+
 function renderTeacherObserveList(){
   const el = document.getElementById('teacherObserveList');
   if(!el) return;
@@ -5581,7 +5624,8 @@ function renderTeacherObserveList(){
     el.innerHTML=`<div style="text-align:center;color:var(--ink-soft);font-size:13px;padding:40px 0">아직 교사 관찰 기록이 없어요 📝<br><span style="font-size:12px">첫 번째 기록을 남겨보세요!</span></div>`;
     return;
   }
-  el.innerHTML=[...teacherObsLogs].reverse().map(m=>{
+  el.innerHTML=[...teacherObsLogs].reverse().map((m,ri)=>{
+    const realIdx = teacherObsLogs.length-1-ri;
     const d=m.date instanceof Date?m.date:new Date(m.date);
     const ds=`${d.getMonth()+1}/${d.getDate()} ${d.getHours()}:${String(d.getMinutes()).padStart(2,'0')}`;
     const s=students.find(x=>x.id===m.studentId);
@@ -5590,6 +5634,9 @@ function renderTeacherObserveList(){
         <span style="background:#E8F4FB;border-radius:999px;padding:3px 10px;font-size:12px;font-weight:700;color:#3F8AA6">👩‍🏫 ${m.teacherName}</span>
         <span style="font-size:13px;color:var(--ink-soft)">→ ${s?s.emoji:''}${m.studentId}</span>
         <span style="margin-left:auto;font-size:11px;color:var(--ink-soft)">${ds}</span>
+        <button onclick="deleteTeacherObs(${realIdx})"
+          style="background:none;border:none;cursor:pointer;font-size:15px;color:#ccc;padding:2px 4px;line-height:1"
+          onmouseover="this.style.color='#E94F33'" onmouseout="this.style.color='#ccc'">🗑️</button>
       </div>
       ${m.content?`<div style="font-size:12px;font-weight:800;color:#3F8AA6;margin-bottom:3px">📝 관찰 내용</div><div style="font-size:13px;line-height:1.6;margin-bottom:8px;white-space:pre-wrap">${m.content}</div>`:''}
       ${m.feeling?`<div style="font-size:12px;font-weight:800;color:var(--warm);margin-bottom:3px">💭 느낀 점</div><div style="font-size:13px;line-height:1.6;margin-bottom:8px;white-space:pre-wrap">${m.feeling}</div>`:''}
@@ -7380,6 +7427,69 @@ function gotoProtected(name){
 }
 
 /* ============ 교사 관찰메모 전체 보기 ============ */
+function renderTeacherObsPanel(){
+  const sel = document.getElementById('teacherObsFilter');
+  const el  = document.getElementById('teacherObsPanelList');
+  if(!el) return;
+
+  // 필터 옵션 채우기
+  if(sel && sel.options.length===1){
+    const names = [...new Set(teacherObsLogs.map(m=>m.teacherName))];
+    names.forEach(n=>{ const o=document.createElement('option'); o.value=n; o.textContent=n; sel.appendChild(o); });
+  }
+
+  const filter = sel ? sel.value : 'all';
+  const filtered = filter==='all' ? teacherObsLogs : teacherObsLogs.filter(m=>m.teacherName===filter);
+
+  if(filtered.length===0){
+    el.innerHTML=`<div style="text-align:center;color:var(--ink-soft);font-size:13px;padding:32px">아직 교사 관찰기록이 없어요 👩‍🏫</div>`;
+    return;
+  }
+
+  el.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px">
+    ${[...filtered].reverse().map((m,ri)=>{
+      const realIdx = teacherObsLogs.length-1-ri;
+      const d=m.date instanceof Date?m.date:new Date(m.date);
+      const ds=`${d.getMonth()+1}/${d.getDate()} ${d.getHours()}:${String(d.getMinutes()).padStart(2,'0')}`;
+      const s=students.find(x=>x.id===m.studentId);
+      return `<div style="background:#F6F8FA;border:1.5px solid var(--line);border-radius:14px;padding:14px">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;flex-wrap:wrap">
+          <span style="background:#E8F4FB;border-radius:999px;padding:3px 10px;font-size:12px;font-weight:700;color:#3F8AA6">👩‍🏫 ${m.teacherName}</span>
+          <span style="font-size:12px;color:var(--ink-soft)">→ ${s?s.emoji:''}${m.studentId}</span>
+          <span style="margin-left:auto;font-size:11px;color:var(--ink-soft)">${ds}</span>
+          <button onclick="deleteTeacherObsFromPanel(${realIdx})"
+            style="background:none;border:none;cursor:pointer;font-size:14px;color:#ccc;padding:2px"
+            onmouseover="this.style.color='#E94F33'" onmouseout="this.style.color='#ccc'">🗑️</button>
+        </div>
+        ${m.content?`<div style="font-size:12px;font-weight:800;color:#3F8AA6;margin-bottom:3px">📝 관찰 내용</div><div style="font-size:13px;line-height:1.6;margin-bottom:6px;white-space:pre-wrap">${m.content}</div>`:''}
+        ${m.feeling?`<div style="font-size:12px;font-weight:800;color:var(--warm);margin-bottom:3px">💭 느낀 점</div><div style="font-size:13px;line-height:1.6;margin-bottom:6px;white-space:pre-wrap">${m.feeling}</div>`:''}
+        ${m.photos&&m.photos.length?`<div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:6px">
+          ${m.photos.map(p=>`<img src="${p}" style="width:68px;height:68px;object-fit:cover;border-radius:8px;cursor:pointer;border:1.5px solid var(--line)" onclick="viewMemoPhoto('${p}')">`).join('')}
+        </div>`:''}
+        ${m.audio&&m.audio.length?`<div style="display:flex;flex-direction:column;gap:4px;margin-bottom:6px">
+          ${m.audio.map(a=>`<audio controls src="${a.url}" style="width:100%;height:30px"></audio>`).join('')}
+        </div>`:''}
+        ${m.sound?`<div style="display:flex;align-items:center;gap:6px;background:#FFF8F2;border-radius:8px;padding:6px 10px">
+          <span style="font-size:14px">🎧</span>
+          <audio controls src="${m.sound}" style="flex:1;height:28px"></audio>
+        </div>`:''}
+      </div>`;
+    }).join('')}
+  </div>`;
+}
+
+function deleteTeacherObsFromPanel(idx){
+  if(!confirm('이 교사 관찰 기록을 삭제할까요?')) return;
+  if(idx < 0 || idx >= teacherObsLogs.length) return;
+  const m = teacherObsLogs[idx];
+  if(m.fbKey && typeof _fbDB !== 'undefined' && _fbDB){
+    _fbDB.ref(`teacherObs/${m.fbKey}`).remove().catch(()=>{});
+  }
+  teacherObsLogs.splice(idx, 1);
+  renderTeacherObsPanel();
+  renderTeacherObserveList();
+}
+
 function renderTeacherMemos(){
   const sel = document.getElementById('teacherMemoFilter');
   const filter = sel?.value || 'all';
