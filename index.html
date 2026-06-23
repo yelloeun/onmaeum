@@ -2111,11 +2111,29 @@ function triggerPWAInstall(){
         </div>
       </div>
 
+
+      <!-- 교사 관찰기록 전체 -->
+      <div class="tpanel" style="grid-column:1 / -1">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+          <h3 style="margin:0">👩‍🏫 교사 관찰기록 전체</h3>
+          <select id="teacherObsFilter" onchange="renderTeacherObsPanel()"
+            style="border:1.5px solid var(--line);border-radius:10px;padding:6px 12px;
+            font-family:inherit;font-size:12px;background:#fff;cursor:pointer">
+            <option value="all">전체</option>
+          </select>
+        </div>
+        <div id="teacherObsPanelList">
+          <div style="text-align:center;color:var(--ink-soft);font-size:13px;padding:32px">
+            아직 교사 관찰기록이 없어요 👩‍🏫
+          </div>
+        </div>
+      </div>
+
       <!-- 📄 성장 안내장 -->
       <div class="tpanel" style="grid-column:1 / -1">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px">
           <div>
-            <h3 style="margin:0">📄 1학기 성장 안내장</h3>
+            <h3 style="margin:0">📄 성장 안내장</h3>
             <p class="lead" style="margin:4px 0 0">학생을 선택하면 AI가 성장 코멘트를 자동 작성해요. 수정 후 인쇄하세요.</p>
           </div>
         </div>
@@ -2207,23 +2225,6 @@ function triggerPWAInstall(){
               style="padding:12px;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;background:#f0ece4;border:none;color:var(--ink-soft);font-family:inherit">
               ← 다른 학생 선택
             </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- 교사 관찰기록 전체 -->
-      <div class="tpanel" style="grid-column:1 / -1">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
-          <h3 style="margin:0">👩‍🏫 교사 관찰기록 전체</h3>
-          <select id="teacherObsFilter" onchange="renderTeacherObsPanel()"
-            style="border:1.5px solid var(--line);border-radius:10px;padding:6px 12px;
-            font-family:inherit;font-size:12px;background:#fff;cursor:pointer">
-            <option value="all">전체</option>
-          </select>
-        </div>
-        <div id="teacherObsPanelList">
-          <div style="text-align:center;color:var(--ink-soft);font-size:13px;padding:32px">
-            아직 교사 관찰기록이 없어요 👩‍🏫
           </div>
         </div>
       </div>
@@ -3475,23 +3476,50 @@ async function selectReportStudent(id){
   document.getElementById('reportStudentGrade').textContent = `${s.grade} · 2026학년도 1학기`;
 
   // 활동 영역별 참여
-  const cats = [{k:'nature',l:'🌳 자연',c:'#3B6D11'},{k:'life',l:'🌱 생명',c:'#639922'},{k:'sound',l:'🎵 소리',c:'#3F8AA6'},{k:'heart',l:'💛 마음',c:'#E07A3C'}];
+  // 활동영역 — 소리 제외 4각형 레이더 차트 (SVG)
+  const cats = [{k:'nature',l:'🌳 자연',c:'#3D7A4A'},{k:'life',l:'🌱 생명',c:'#639922'},{k:'heart',l:'💛 마음',c:'#E07A3C'},{k:'kedi',l:'💚 인성',c:'#9B59B6'}];
   const sLogs = allLogs.filter(l=>l.studentId===id&&l.type==='activity');
   const total = sLogs.reduce((a,b)=>a+(b.points||0),0)||1;
+  const catPts = {
+    nature: sLogs.filter(l=>l.category==='nature').reduce((a,b)=>a+(b.points||0),0),
+    life:   sLogs.filter(l=>l.category==='life').reduce((a,b)=>a+(b.points||0),0),
+    heart:  sLogs.filter(l=>l.category==='heart').reduce((a,b)=>a+(b.points||0),0),
+  };
+  const maxPt = Math.max(...Object.values(catPts), 1);
+  // 4각형 꼭짓점: 위(자연), 오른쪽(생명), 아래(마음), 왼쪽(인성)
+  // 중심 cx=100, cy=90, 최대반경 r=60
+  const cx=100, cy=90, r=60;
+  const angles = [-90, 0, 90, 180]; // 위, 우, 하, 좌
+  const keys = ['nature','life','heart','heart']; // 인성은 별도
+  const ratios = [catPts.nature/maxPt, catPts.life/maxPt, catPts.heart/maxPt, (catPts.nature+catPts.life+catPts.heart)/maxPt/3];
+  const pts = angles.map((a,i)=>({
+    x: cx + Math.cos(a*Math.PI/180)*r*ratios[i],
+    y: cy + Math.sin(a*Math.PI/180)*r*ratios[i]
+  }));
+  const outerPts = angles.map(a=>({
+    x: cx + Math.cos(a*Math.PI/180)*r,
+    y: cy + Math.sin(a*Math.PI/180)*r
+  }));
+  const midPts = angles.map(a=>({
+    x: cx + Math.cos(a*Math.PI/180)*r*0.5,
+    y: cy + Math.sin(a*Math.PI/180)*r*0.5
+  }));
+  const toStr = arr => arr.map(p=>`${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
   const catEl = document.getElementById('reportCatBars');
-  if(catEl) catEl.innerHTML = cats.map(c=>{
-    const pts = sLogs.filter(l=>l.category===c.k).reduce((a,b)=>a+(b.points||0),0);
-    const pct = Math.round(pts/total*100);
-    return `<div style="display:flex;align-items:center;gap:6px">
-      <span style="font-size:10px;color:#888;width:44px">${c.l}</span>
-      <div style="flex:1;background:#e8e8e0;border-radius:999px;height:5px;overflow:hidden">
-        <div style="width:${pct}%;height:100%;background:${c.c};border-radius:999px"></div>
-      </div>
-      <span style="font-size:10px;color:#888">${pts}점</span>
-    </div>`;
-  }).join('');
+  if(catEl) catEl.innerHTML = `
+    <svg viewBox="0 0 200 175" style="width:100%;display:block">
+      <polygon points="${toStr(outerPts)}" fill="none" stroke="#e0e0d8" stroke-width="1"/>
+      <polygon points="${toStr(midPts)}" fill="none" stroke="#e0e0d8" stroke-width="1"/>
+      ${angles.map(a=>`<line x1="${cx}" y1="${cy}" x2="${(cx+Math.cos(a*Math.PI/180)*r).toFixed(1)}" y2="${(cy+Math.sin(a*Math.PI/180)*r).toFixed(1)}" stroke="#e0e0d8" stroke-width="1"/>`).join('')}
+      <polygon points="${toStr(pts)}" fill="rgba(61,122,74,0.2)" stroke="#3D7A4A" stroke-width="2" stroke-linejoin="round"/>
+      ${pts.map(p=>`<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="3" fill="#3D7A4A"/>`).join('')}
+      <text x="${cx}" y="20" text-anchor="middle" font-size="10" fill="#3D7A4A" font-weight="600">🌳 자연 ${catPts.nature}점</text>
+      <text x="${cx+r+8}" y="${cy+4}" text-anchor="start" font-size="10" fill="#639922" font-weight="600">🌱 생명 ${catPts.life}점</text>
+      <text x="${cx}" y="${cy+r+14}" text-anchor="middle" font-size="10" fill="#E07A3C" font-weight="600">💛 마음 ${catPts.heart}점</text>
+      <text x="${cx-r-8}" y="${cy+4}" text-anchor="end" font-size="10" fill="#9B59B6" font-weight="600">💚 인성</text>
+    </svg>`;
 
-  // 인성검사 성장
+  // 인성검사 — 수직 막대 차트
   const kediAreas = ['자기인식 및 관리','협력적 소통','대인관계 및 공동체','윤리적 책임'];
   const kediShort = ['자기인식','협력소통','대인관계','윤리책임'];
   const d1=kediData[`${id}_1`]; const d3=kediData[`${id}_3`]||kediData[`${id}_2`];
