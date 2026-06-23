@@ -2195,7 +2195,7 @@ function triggerPWAInstall(){
               <!-- 선생님의 한마디 -->
               <div style="border-radius:10px;padding:14px;margin-bottom:10px;border:1px solid #e0e0e0">
                 <div style="font-size:11px;color:#888;margin-bottom:6px;display:flex;align-items:center;justify-content:space-between">
-                  <span>선생님의 한마디</span>
+                  <span>남평행복프로젝트 활동을 통해서...</span>
                   <button onclick="document.getElementById('reportComment').value='✨ 생성 중이에요...';generateReportComment()" id="regenBtn"
                     style="font-size:11px;color:#3F8AA6;background:none;border:1px solid #c0d8e8;border-radius:999px;padding:3px 10px;cursor:pointer">
                     🔄 다시 생성
@@ -3589,11 +3589,17 @@ async function selectReportStudent(id){
 }
 
 function generateFallbackComment(s,total,topCats,janban,avg,zero,fruit,obsTexts,kediGrown){
-  const name = s.fullId||s.id;
+  // 성 빼고 이름만 + 받침 유무로 이는/는
+  const fullName = s.fullId||s.id;
+  const firstName = fullName.length >= 2 ? fullName.slice(1) : fullName; // 성 제거
+  const lastChar = firstName.charCodeAt(firstName.length-1);
+  const hasBatchim = (lastChar - 0xAC00) % 28 !== 0;
+  const nameEun = firstName + (hasBatchim ? '이는' : '는'); // 서아는, 예음이는
+  const nameGa = firstName + (hasBatchim ? '이' : ''); // 서아, 예음이
 
   // 1문장: 총점+레벨 반영
   const level = total>=150?'매우 활발하고 적극적인':total>=100?'성실하고 꾸준한':'차분하고 집중력 있는';
-  const s1 = `${name}는 이번 1학기 동안 ${level} 모습으로 남평행복프로젝트의 다양한 활동에 참여하며 총 ${total}점의 온(溫)포인트를 모았습니다.`;
+  const s1 = `${nameEun} 이번 1학기 동안 ${level} 모습으로 남평행복프로젝트의 다양한 활동에 참여하며 총 ${total}점의 온(溫)포인트를 모았습니다.`;
 
   // 2문장: 주요 활동 — 아이마다 다르게
   const catSentences = {
@@ -3621,13 +3627,13 @@ function generateFallbackComment(s,total,topCats,janban,avg,zero,fruit,obsTexts,
     const firstObs = obsTexts[0].slice(0,35)+(obsTexts[0].length>35?'…':'');
     s4=`관찰 활동에서는 "${firstObs}"라고 기록할 만큼 주변을 세심하게 살피는 눈이 생겼으며, 자신의 생각과 느낌을 글로 표현하는 능력도 쑥쑥 자라났습니다.`;
   } else if(kediGrown){
-    s4=`인성 역량 검사에서도 성장하는 모습을 보여 주었으며, 스스로를 돌아보고 올바른 가치관을 형성해 나가는 ${name}의 모습이 참으로 대견합니다.`;
+    s4=`인성 역량 검사에서도 성장하는 모습을 보여 주었으며, 스스로를 돌아보고 올바른 가치관을 형성해 나가는 ${firstName}의 모습이 참으로 대견합니다.`;
   } else {
-    s4=`${name}는 매일의 활동에서 스스로 해야 할 일을 찾아 실천하고, 친구들과 어울리며 밝고 건강한 학교생활을 이어 나가고 있습니다.`;
+    s4=`${nameEun} 매일의 활동에서 스스로 해야 할 일을 찾아 실천하고, 친구들과 어울리며 밝고 건강한 학교생활을 이어 나가고 있습니다.`;
   }
 
   // 5문장: 마무리
-  const s5 = `이번 여름방학 동안에도 자연과 친구들, 그리고 주변의 소중한 것들에 관심을 가지며 건강하고 행복한 시간을 보내길 바라며, 2학기에 더욱 성장한 ${name}의 모습을 기대합니다.`;
+  const s5 = `이번 여름방학 동안에도 자연과 친구들, 그리고 주변의 소중한 것들에 관심을 가지며 건강하고 행복한 시간을 보내길 바라며, 2학기에 더욱 성장한 ${firstName}의 모습을 기대합니다.`;
 
   return [s1, s2, s3, s4, s5].filter(Boolean).join(' ');
 }
@@ -3635,6 +3641,11 @@ function generateFallbackComment(s,total,topCats,janban,avg,zero,fruit,obsTexts,
 async function generateReportComment(){
   const s=students.find(x=>x.id===reportStudent);
   if(!s) return;
+  const fullName = s.fullId||s.id;
+  const firstName = fullName.length >= 2 ? fullName.slice(1) : fullName;
+  const lastChar = firstName.charCodeAt(firstName.length-1);
+  const hasBatchim = (lastChar - 0xAC00) % 28 !== 0;
+  const nameEun = firstName + (hasBatchim ? '이는' : '는');
   const sLogs=allLogs.filter(l=>l.studentId===reportStudent&&l.type==='activity');
   const total=sLogs.reduce((a,b)=>a+(b.points||0),0);
   const cats={nature:0,life:0,sound:0,heart:0};
