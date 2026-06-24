@@ -3508,35 +3508,65 @@ async function selectReportStudent(id){
       <text x="${cx-r-10}" y="${cy+4}" text-anchor="end" font-size="10" fill="#9B59B6" font-weight="600">💚 인성</text>
     </svg>`;
 
-  // 인성검사 — 수직 막대 차트
+  // 인성검사 — 수직 막대 차트 (SVG)
   const kediAreas = ['자기인식 및 관리','협력적 소통','대인관계 및 공동체','윤리적 책임'];
   const kediShort = ['자기인식','협력소통','대인관계','윤리책임'];
   const d1=kediData[`${id}_1`]; const d3=kediData[`${id}_3`]||kediData[`${id}_2`];
   const kediEl = document.getElementById('reportKediBars');
   if(kediEl){
-    if(!d1){ kediEl.innerHTML=`<div style="font-size:12px;color:#aaa;text-align:center;padding:10px">인성검사 미제출</div>`; }
-    else kediEl.innerHTML = kediAreas.map((area,ai)=>{
-      const qs=KEDI_QUESTIONS.map((q,i)=>({...q,i})).filter(q=>q.area===area);
-      const avg=(d)=>{ if(!d?.submitted) return null; const vs=qs.map(q=>d[`q${q.i}`]).filter(v=>v); return vs.length?Math.round(vs.reduce((a,b)=>a+b,0)/vs.length*10)/10:null; };
-      const v1=avg(d1), v2=avg(d3);
-      const only1 = v1 && !v2; // 1회차만 있는 경우
-      const color = v1&&v2 ? (v2>v1?'#3B6D11':'#aaa') : '#3B6D11';
-      const arrow = v1&&v2 ? (v2>v1?'▲':v2<v1?'▼':'━') : '';
-      const scoreText = only1
-        ? `${v1} <span style="color:#aaa;font-size:9px">(8월 2회차 예정)</span>`
-        : `${v1||'—'} → ${v2||'—'} ${arrow}`;
-      const barPct = v2 ? v2/5*100 : v1 ? v1/5*100 : 0;
-      return `<div>
-        <div style="display:flex;justify-content:space-between;font-size:10px;margin-bottom:2px;align-items:center">
-          <span style="color:#888">${kediShort[ai]}</span>
-          <span style="color:${color};font-weight:500">${scoreText}</span>
+    if(!d1){ kediEl.innerHTML=`<div style="font-size:12px;color:#aaa;text-align:center;padding:20px">인성검사 미제출</div>`; }
+    else {
+      const getAvg=(d,area)=>{
+        if(!d?.submitted) return null;
+        const qs=KEDI_QUESTIONS.map((q,i)=>({...q,i})).filter(q=>q.area===area);
+        const vs=qs.map(q=>d[`q${q.i}`]).filter(v=>v);
+        return vs.length?Math.round(vs.reduce((a,b)=>a+b,0)/vs.length*10)/10:null;
+      };
+      const maxH = 80; // 막대 최대 높이px
+      const bars = kediAreas.map((area,ai)=>({
+        label: kediShort[ai],
+        v1: getAvg(d1,area),
+        v2: getAvg(d3,area)
+      }));
+
+      const barItems = bars.map((b,i)=>{
+        const h1 = b.v1 ? Math.round(b.v1/5*maxH) : 2;
+        const h2 = b.v2 ? Math.round(b.v2/5*maxH) : 0;
+        const label2 = b.label.length>3 ? b.label.slice(0,2)+'<tspan x="'+(i*50+18)+'" dy="12">'+b.label.slice(2)+'</tspan>' : b.label;
+        return `
+          <!-- ${b.label} -->
+          <g transform="translate(${i*50+4},0)">
+            <!-- 1회차 막대 -->
+            <rect x="4" y="${maxH-h1}" width="13" height="${h1}" rx="2" fill="#d0d8cc"/>
+            <text x="10" y="${maxH-h1-4}" text-anchor="middle" font-size="8" fill="#aaa">${b.v1||''}</text>
+            <!-- 2회차 막대 -->
+            ${b.v2 ? `<rect x="19" y="${maxH-h2}" width="13" height="${h2}" rx="2" fill="#3D7A4A"/>
+            <text x="25" y="${maxH-h2-4}" text-anchor="middle" font-size="8" fill="#3D7A4A" font-weight="600">${b.v2}</text>` : ''}
+            <!-- 라벨 -->
+            <text x="18" y="${maxH+12}" text-anchor="middle" font-size="8" fill="#888">${b.label.slice(0,3)}</text>
+            <text x="18" y="${maxH+22}" text-anchor="middle" font-size="8" fill="#888">${b.label.slice(3)||''}</text>
+          </g>`;
+      }).join('');
+
+      kediEl.innerHTML = `
+        <div style="display:flex;gap:10px;margin-bottom:6px">
+          <div style="display:flex;align-items:center;gap:3px">
+            <div style="width:9px;height:9px;border-radius:2px;background:#d0d8cc"></div>
+            <span style="font-size:9px;color:#aaa">1회차(5월)</span>
+          </div>
+          ${d3?`<div style="display:flex;align-items:center;gap:3px">
+            <div style="width:9px;height:9px;border-radius:2px;background:#3D7A4A"></div>
+            <span style="font-size:9px;color:#3D7A4A">2회차</span>
+          </div>`:'<span style="font-size:9px;color:#aaa">2회차 8월 예정</span>'}
         </div>
-        <div style="background:#e8e8e0;border-radius:999px;height:4px;overflow:hidden">
-          <div style="width:${barPct}%;height:100%;background:${color};border-radius:999px"></div>
-        </div>
-      </div>`;
-    }).join('')
-    + (d1&&!d3 ? `<div style="font-size:10px;color:#aaa;margin-top:6px;text-align:center">8월 2회차 검사 후 성장 비교 예정</div>` : '');
+        <svg viewBox="0 0 208 ${maxH+30}" style="width:100%;display:block">
+          <!-- 기준선 -->
+          <line x1="0" y1="${maxH}" x2="208" y2="${maxH}" stroke="#e0e0d8" stroke-width="1"/>
+          ${barItems}
+        </svg>
+        ${!d3?`<div style="font-size:9px;color:#aaa;text-align:center;margin-top:4px">8월 2회차 검사 후 성장 비교 예정</div>`:''}
+        <div style="font-size:9px;color:#aaa;text-align:center;margin-top:2px">※ 5점 만점</div>`;
+    }
   }
 
   // 잔반 기록
