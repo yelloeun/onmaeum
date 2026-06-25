@@ -5952,14 +5952,14 @@ function handleObsSoundUpload(input){
 
 /* ====== 교사 관찰 기록 ====== */
 const teacherObsLogs = [];
-let teacherObsPickSel = null;
+let teacherObsPickSel = []; // 다중선택 배열
 let teacherObsPhotoFiles = [];
 
 function renderTeacherObsPick(){
   const el = document.getElementById('teacherObsPick');
   if(!el) return;
   el.innerHTML = students.map(s=>{
-    const sel = teacherObsPickSel===s.id;
+    const sel = teacherObsPickSel.includes(s.id);
     return `<button onclick="selectTeacherObsPick('${s.id}')"
       style="background:${sel?'var(--sky)':'#fff'};color:${sel?'#fff':'var(--ink)'};
       border:1.5px solid ${sel?'var(--sky)':'var(--line)'};border-radius:12px;
@@ -5972,7 +5972,9 @@ function renderTeacherObsPick(){
 }
 
 function selectTeacherObsPick(id){
-  teacherObsPickSel = teacherObsPickSel===id ? null : id; // 다시 누르면 해제
+  const idx = teacherObsPickSel.indexOf(id);
+  if(idx >= 0) teacherObsPickSel.splice(idx, 1); // 이미 선택됐으면 해제
+  else teacherObsPickSel.push(id); // 새로 추가
   renderTeacherObsPick();
 }
 
@@ -6076,7 +6078,10 @@ async function saveTeacherObservation(){
   if(!name){ alert('교사 이름을 입력해주세요!'); return; }
   if(!content && !feeling){ alert('관찰 내용 또는 느낀 점을 입력해주세요!'); return; }
 
-  const folder = 'teacher_obs';
+  const targetIds = teacherObsPickSel.length > 0 ? teacherObsPickSel : ['전체'];
+  const targetLabel = teacherObsPickSel.length > 0
+    ? teacherObsPickSel.join(', ')
+    : '전체';
   const photoUrls = await Promise.all(teacherObsPhotoFiles.map(async f=>{
     const r = await new Promise(res=>{const fr=new FileReader();fr.onload=e=>res(e.target.result);fr.readAsDataURL(f);});
     return uploadToCloudinary(r, folder).catch(()=>r);
@@ -6097,7 +6102,7 @@ async function saveTeacherObservation(){
 
   const now = new Date();
   const entry = {
-    teacherName: name, studentId: teacherObsPickSel || '전체',
+    teacherName: name, studentId: targetLabel,
     content, feeling, photos: photoUrls, audio: audioUrls,
     sound: soundUrl, date: now
   };
@@ -6106,7 +6111,7 @@ async function saveTeacherObservation(){
 
   if(typeof _fbDB !== 'undefined' && _fbDB){
     _fbDB.ref('teacherObs').push({
-      teacherName: name, studentId: teacherObsPickSel||'전체',
+      teacherName: name, studentId: targetLabel,
       content, feeling, photos: photoUrls, audio: audioUrls,
       sound: soundUrl, ts: now.getTime()
     }).catch(()=>{});
@@ -6123,7 +6128,7 @@ async function saveTeacherObservation(){
   document.getElementById('teacherSoundPreview').innerHTML='';
   document.getElementById('teacherSoundInput').value='';
   teacherObsPhotoFiles=[];
-  teacherObsPickSel=null;
+  teacherObsPickSel=[];
   teacherAudioFiles=[];
   teacherSoundFile=null;
   renderTeacherObsPick();
