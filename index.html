@@ -3494,18 +3494,19 @@ async function selectReportStudent(id){
     y: cy + Math.sin(a*Math.PI/180)*r*0.5
   }));
   const toStr = arr => arr.map(p=>`${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
+  const catColors = ['#7BC87E','#74B8E0','#F5A623','#B39DDB']; // 파스텔 초록/파랑/주황/보라
   const catEl = document.getElementById('reportCatBars');
   if(catEl) catEl.innerHTML = `
-    <svg viewBox="-20 0 240 200" style="width:100%;display:block">
-      <polygon points="${toStr(outerPts)}" fill="none" stroke="#e0e0d8" stroke-width="1"/>
-      <polygon points="${toStr(midPts)}" fill="none" stroke="#e0e0d8" stroke-width="1"/>
-      ${angles.map(a=>`<line x1="${cx}" y1="${cy}" x2="${(cx+Math.cos(a*Math.PI/180)*r).toFixed(1)}" y2="${(cy+Math.sin(a*Math.PI/180)*r).toFixed(1)}" stroke="#e0e0d8" stroke-width="1"/>`).join('')}
-      <polygon points="${toStr(pts)}" fill="rgba(61,122,74,0.2)" stroke="#3D7A4A" stroke-width="2" stroke-linejoin="round"/>
-      ${pts.map(p=>`<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="3" fill="#3D7A4A"/>`).join('')}
-      <text x="${cx}" y="16" text-anchor="middle" font-size="10" fill="#3D7A4A" font-weight="600">🌳 자연 ${catPts.nature}점</text>
-      <text x="${cx+r+10}" y="${cy+4}" text-anchor="start" font-size="10" fill="#639922" font-weight="600">🌱 생명 ${catPts.life}점</text>
-      <text x="${cx}" y="${cy+r+16}" text-anchor="middle" font-size="10" fill="#E07A3C" font-weight="600">💛 마음 ${catPts.heart}점</text>
-      <text x="${cx-r-10}" y="${cy+4}" text-anchor="end" font-size="10" fill="#9B59B6" font-weight="600">💚 인성</text>
+    <svg viewBox="-20 0 240 205" style="width:100%;display:block">
+      <polygon points="${toStr(outerPts)}" fill="none" stroke="#e8e8e0" stroke-width="1"/>
+      <polygon points="${toStr(midPts)}" fill="none" stroke="#e8e8e0" stroke-width="1"/>
+      ${angles.map((a,i)=>`<line x1="${cx}" y1="${cy}" x2="${(cx+Math.cos(a*Math.PI/180)*r).toFixed(1)}" y2="${(cy+Math.sin(a*Math.PI/180)*r).toFixed(1)}" stroke="#e8e8e0" stroke-width="1"/>`).join('')}
+      <polygon points="${toStr(pts)}" fill="rgba(123,200,126,0.25)" stroke="#7BC87E" stroke-width="2.5" stroke-linejoin="round"/>
+      ${pts.map((p,i)=>`<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="4" fill="${catColors[i]}" stroke="#fff" stroke-width="1.5"/>`).join('')}
+      <text x="${cx}" y="14" text-anchor="middle" font-size="10" fill="${catColors[0]}" font-weight="700">🌳 자연 ${catPts.nature}점</text>
+      <text x="${cx+r+12}" y="${cy+4}" text-anchor="start" font-size="10" fill="${catColors[1]}" font-weight="700">🌱 생명 ${catPts.life}점</text>
+      <text x="${cx}" y="${cy+r+18}" text-anchor="middle" font-size="10" fill="${catColors[2]}" font-weight="700">💛 마음 ${catPts.heart}점</text>
+      <text x="${cx-r-12}" y="${cy+4}" text-anchor="end" font-size="10" fill="${catColors[3]}" font-weight="700">💚 인성 ${Math.round((catPts.nature+catPts.life+catPts.heart)/3)}점</text>
     </svg>`;
 
   // 인성검사 — 수직 막대 차트 (SVG)
@@ -3529,22 +3530,21 @@ async function selectReportStudent(id){
         v2: getAvg(d3,area)
       }));
 
+      const barPastel = ['#7BC87E','#74B8E0','#F5A623','#B39DDB'];
       const barItems = bars.map((b,i)=>{
         const h1 = b.v1 ? Math.round(b.v1/5*maxH) : 2;
         const h2 = b.v2 ? Math.round(b.v2/5*maxH) : 0;
-        const label2 = b.label.length>3 ? b.label.slice(0,2)+'<tspan x="'+(i*50+18)+'" dy="12">'+b.label.slice(2)+'</tspan>' : b.label;
+        const col = barPastel[i];
+        const l1 = b.label.slice(0,2); // 자기, 협력, 대인, 윤리
+        const l2 = b.label.slice(2);   // 인식, 소통, 관계, 책임
         return `
-          <!-- ${b.label} -->
-          <g transform="translate(${i*50+4},0)">
-            <!-- 1회차 막대 -->
-            <rect x="4" y="${maxH-h1}" width="13" height="${h1}" rx="2" fill="#d0d8cc"/>
-            <text x="10" y="${maxH-h1-4}" text-anchor="middle" font-size="8" fill="#aaa">${b.v1||''}</text>
-            <!-- 2회차 막대 -->
-            ${b.v2 ? `<rect x="19" y="${maxH-h2}" width="13" height="${h2}" rx="2" fill="#3D7A4A"/>
-            <text x="25" y="${maxH-h2-4}" text-anchor="middle" font-size="8" fill="#3D7A4A" font-weight="600">${b.v2}</text>` : ''}
-            <!-- 라벨 -->
-            <text x="18" y="${maxH+12}" text-anchor="middle" font-size="8" fill="#888">${b.label.slice(0,3)}</text>
-            <text x="18" y="${maxH+22}" text-anchor="middle" font-size="8" fill="#888">${b.label.slice(3)||''}</text>
+          <g transform="translate(${i*52+4},0)">
+            <rect x="4" y="${maxH-h1}" width="14" height="${h1}" rx="3" fill="${col}" opacity="0.5"/>
+            <text x="11" y="${maxH-h1-4}" text-anchor="middle" font-size="8" fill="#888">${b.v1||''}</text>
+            ${b.v2 ? `<rect x="20" y="${maxH-h2}" width="14" height="${h2}" rx="3" fill="${col}"/>
+            <text x="27" y="${maxH-h2-4}" text-anchor="middle" font-size="8" fill="${col}" font-weight="700">${b.v2}</text>` : ''}
+            <text x="19" y="${maxH+11}" text-anchor="middle" font-size="8.5" fill="#888">${l1}</text>
+            <text x="19" y="${maxH+22}" text-anchor="middle" font-size="8.5" fill="#888">${l2}</text>
           </g>`;
       }).join('');
 
@@ -3578,11 +3578,37 @@ async function selectReportStudent(id){
       const avg=Math.round(janban.reduce((a,b)=>a+(b.weight||0),0)/janban.length);
       const zero=janban.filter(l=>(l.weight||0)===0).length;
       const fruit=janban.filter(l=>(l.weight||0)<100).length;
+      const maxW = avg<=50?'100%':avg<=100?`${Math.round(avg/200*100)}%`:`${Math.round(Math.min(avg,300)/300*100)}%`;
+      const barColor = avg===0?'#7BC87E':avg<=100?'#74B8E0':avg<=150?'#F5A623':'#E07A3C';
+      const fruitEmojis = Array(Math.min(fruit,10)).fill('🍎').join('');
       janbanEl.innerHTML=`
-        <div style="display:flex;justify-content:space-between;font-size:11px"><span style="color:#888">총 측정 횟수</span><span style="font-weight:500">${janban.length}회</span></div>
-        <div style="display:flex;justify-content:space-between;font-size:11px"><span style="color:#888">평균 잔반량</span><span style="font-weight:500;color:#3B6D11">${avg}g</span></div>
-        <div style="display:flex;justify-content:space-between;font-size:11px"><span style="color:#888">0g 달성</span><span style="font-weight:500;color:#3B6D11">${zero}회 🏆</span></div>
-        <div style="background:#EAF3DE;border-radius:8px;padding:4px 8px;margin-top:2px;font-size:10px;color:#3B6D11">초록 열매 ${fruit}개 획득!</div>`;
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+          <div style="text-align:center;min-width:52px">
+            <div style="font-size:22px;font-weight:700;color:${barColor}">${avg}g</div>
+            <div style="font-size:9px;color:#aaa">평균 잔반량</div>
+          </div>
+          <div style="flex:1">
+            <div style="background:#e8e8e0;border-radius:999px;height:8px;overflow:hidden;margin-bottom:4px">
+              <div style="width:${Math.min(avg/300*100,100)}%;height:100%;background:${barColor};border-radius:999px;transition:width .6s"></div>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:9px;color:#aaa">
+              <span>0g</span><span>300g</span>
+            </div>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px">
+          <div style="background:#f0f8f0;border-radius:8px;padding:6px 8px;text-align:center">
+            <div style="font-size:16px;font-weight:700;color:#3D7A4A">${janban.length}회</div>
+            <div style="font-size:9px;color:#aaa">총 측정 횟수</div>
+          </div>
+          <div style="background:#fff8f0;border-radius:8px;padding:6px 8px;text-align:center">
+            <div style="font-size:16px;font-weight:700;color:#F5A623">${zero}회 🏆</div>
+            <div style="font-size:9px;color:#aaa">0g 달성</div>
+          </div>
+        </div>
+        <div style="background:#EAF3DE;border-radius:8px;padding:5px 8px;text-align:center;font-size:11px;color:#3D7A4A;letter-spacing:1px">${fruitEmojis}${fruit>10?`+${fruit-10}`:''}
+          <span style="font-size:9px;color:#639922;margin-left:4px">열매 ${fruit}개 획득!</span>
+        </div>`;
     }
   }
 
