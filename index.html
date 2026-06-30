@@ -2997,8 +2997,8 @@ const categories = [
     ]},
   { key:'heart', icon:'💛', ttl:'마음을 나눴어요', en:'Share Warm Heart', color:'#D86B7B',
     items:[
-      {e:'🧑‍🤝‍🧑', t:'마음 도슨트', p:15},
-      {e:'🏘️', t:'어른께 전하는 마음', p:15},
+      {e:'🥰', t:'마음 도슨트', p:15},
+      {e:'💗', t:'주변 어른께 전하는 마음', p:15},
       {e:'🤝', t:'친구 도와주기', p:10},
       {e:'🙇', t:'잘못 인정하기', p:15},
       {e:'🙏', t:'고맙다 말하기', p:5},
@@ -3040,10 +3040,10 @@ const modalItems = [
     yes:'환경 사랑 영상만들기 활동에 참여했어요!', no:'다음에는 즐겁게 참여할게요.' },
   { e:'🥰', ico:'🥰', t:'형님-동생 마음 도슨트',    p:1, cat:'heart',
     q:'형님과 동생이 서로의 마음을 알아차렸나요?',
-    yes:'형님과 동생이 서로의 마음을 알아차렸어요!', no:'다음에는 서로의 마음을 더 들여다볼게요.' },
-  { e:'💛', ico:'💛', t:'어른께 전하는 초록 마음',  p:1, cat:'heart',
+    yes:'형님과 동생이 서로의 마음을 친절하게 읽어줬어요!', no:'다음에는 서로의 마음을 더 들여다볼게요.' },
+  { e:'💗', ico:'💗', t:'주변 어른께 전하는 초록 마음',  p:1, cat:'heart',
     q:'부모님, 선생님, 마을 어른께 친절한 마음을 전달했나요?',
-    yes:'부모님, 선생님, 마을 어른께 친절한 마음을 전했어요!', no:'다음에는 즐겁게 참여할게요.' },
+    yes:'부모님, 선생님, 마을 어른께 친절하게 말하고 행동했어요!', no:'다음에는 즐겁게 참여할게요.' },
 ];
 const catTotal = { nature: 0, life: 0, sound: 0, heart: 0 };
 
@@ -6933,9 +6933,23 @@ function closeActConfirm(){
   document.getElementById('actConfirmBg').classList.remove('show');
   confirmItemIdx = null;
 }
+let _confirmYesLock = false;
 function confirmYes(){
   if(confirmItemIdx === null) return;
-  const a = modalItems[confirmItemIdx];
+  if(_confirmYesLock) return; // 중복 클릭 방지
+  _confirmYesLock = true;
+
+  const yesBtn = document.getElementById('acYes');
+  if(yesBtn) yesBtn.style.pointerEvents = 'none';
+
+  const idx = confirmItemIdx;
+  confirmItemIdx = null; // 즉시 초기화 — 재진입 차단
+  setTimeout(()=>{
+    _confirmYesLock = false;
+    if(yesBtn) yesBtn.style.pointerEvents = '';
+  }, 1200);
+
+  const a = modalItems[idx];
   // 기록 저장 (횟수 누적)
   const key = actLogKey(currentStudent, a.t);
   actLog[key] = (actLog[key] || 0) + 1;
