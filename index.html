@@ -2997,8 +2997,8 @@ const categories = [
     ]},
   { key:'heart', icon:'💛', ttl:'마음을 나눴어요', en:'Share Warm Heart', color:'#D86B7B',
     items:[
-      {e:'🧒', t:'소리 도슨트', p:15},
-      {e:'🏘️', t:'마을 나눔', p:15},
+      {e:'🧑‍🤝‍🧑', t:'마음 도슨트', p:15},
+      {e:'🏘️', t:'어른께 전하는 마음', p:15},
       {e:'🤝', t:'친구 도와주기', p:10},
       {e:'🙇', t:'잘못 인정하기', p:15},
       {e:'🙏', t:'고맙다 말하기', p:5},
@@ -3038,12 +3038,12 @@ const modalItems = [
   { e:'🎬', ico:'🎬', t:'생태 시네마틱 성찰',        p:1, cat:'sound',
     q:'환경을 사랑 마음을 영상에 담아봤나요?',
     yes:'환경 사랑 영상만들기 활동에 참여했어요!', no:'다음에는 즐겁게 참여할게요.' },
-  { e:'👧', ico:'👧', t:'형님-동생 소리 도슨트',    p:1, cat:'heart',
-    q:'형님이 찾은 소리를 동생과 들었나요?',
-    yes:'형님이 찾은 소리를 동생이 함께 들었어요.', no:'다음에는 소리에 대해 함께 이야기 나눠요.' },
-  { e:'💛', ico:'💛', t:'마을에 전하는 초록 마음',  p:1, cat:'heart',
-    q:'마을의 어른을 뵙고 마음을 전달했나요?',
-    yes:'마을의 어른을 찾아뵈며 행복을 나눴어요.', no:'다음에는 즐겁게 참여할게요.' },
+  { e:'🥰', ico:'🥰', t:'형님-동생 마음 도슨트',    p:1, cat:'heart',
+    q:'형님과 동생이 서로의 마음을 알아차렸나요?',
+    yes:'형님과 동생이 서로의 마음을 알아차렸어요!', no:'다음에는 서로의 마음을 더 들여다볼게요.' },
+  { e:'💛', ico:'💛', t:'어른께 전하는 초록 마음',  p:1, cat:'heart',
+    q:'부모님, 선생님, 마을 어른께 친절한 마음을 전달했나요?',
+    yes:'부모님, 선생님, 마을 어른께 친절한 마음을 전했어요!', no:'다음에는 즐겁게 참여할게요.' },
 ];
 const catTotal = { nature: 0, life: 0, sound: 0, heart: 0 };
 
@@ -3168,7 +3168,8 @@ function loadFromSheet(){
       s.total += log.points;
       if(logDate.toLocaleDateString('ko-KR')===todayStr){
         s.today += log.points;
-        actLog[actLogKey(r.studentId, r.activity)] = true;
+        const k = actLogKey(r.studentId, r.activity);
+        actLog[k] = (actLog[k] || 0) + 1;
       }
       if(r.category) catTotal[r.category] = (catTotal[r.category]||0) + log.points;
     });
@@ -6769,7 +6770,8 @@ function renderActs(){
   if(!el) return;
   el.innerHTML = modalItems.map((a, i)=>{
     const cnt  = sessionActions.filter(x=>x.t===a.t).length;
-    const done = !!actLog[actLogKey(currentStudent, a.t)];
+    const todayCnt = actLog[actLogKey(currentStudent, a.t)] || 0;
+    const done = todayCnt > 0;
     const col  = catColors[a.cat] || '#3D7A4A';
     const bg   = catBg[a.cat]    || '#EEF6E8';
 
@@ -6795,7 +6797,7 @@ function renderActs(){
       <span class="act-ico">${a.ico||a.e}</span>
       ${ptBadge}
       <div class="at" style="color:${textColor};font-size:11px">${a.t}</div>
-      ${done?`<div style="font-size:10px;color:rgba(255,255,255,.9);margin-top:2px;font-weight:700">완료!</div>`
+      ${done?`<div style="font-size:10px;color:rgba(255,255,255,.9);margin-top:2px;font-weight:700">오늘 ${todayCnt}번 했어요!</div>`
             :cnt>0?`<div class="cnt" style="color:${col}">×${cnt}</div>`:''}
     </button>`;
   }).join('');
@@ -6911,8 +6913,10 @@ function openActConfirm(idx, ev){
     openFruitModal();
     return;
   }
-  // 이미 오늘 기록했는지 확인
-  if(actLog[actLogKey(currentStudent, a.t)]){
+
+  // 급식(janban)과 우유갑만 하루 1회 제한, 나머지는 무제한 가능
+  const limitedOnce = (a.t === '헌 우유갑 새 휴지');
+  if(limitedOnce && actLog[actLogKey(currentStudent, a.t)]){
     document.getElementById('alreadyMsg').innerHTML =
       `<b>${a.t}</b>는 오늘 이미 기록했어요.<br>내일도 열심히 해봐요. <b>화이팅! 💪</b>`;
     document.getElementById('alreadyModal').classList.add('show');
@@ -6932,8 +6936,10 @@ function closeActConfirm(){
 function confirmYes(){
   if(confirmItemIdx === null) return;
   const a = modalItems[confirmItemIdx];
-  // 기록 저장
-  actLog[actLogKey(currentStudent, a.t)] = true;
+  // 기록 저장 (횟수 누적)
+  const key = actLogKey(currentStudent, a.t);
+  actLog[key] = (actLog[key] || 0) + 1;
+  const todayCount = actLog[key];
   closeActConfirm();
 
   // 점수 적용 (s 먼저 선언)
@@ -6960,6 +6966,16 @@ function confirmYes(){
   fl.style.top   = '45%';
   document.body.appendChild(fl);
   setTimeout(()=>fl.remove(), 1100);
+
+  // 누적 횟수 멘트 (2회 이상부터 표시)
+  if(todayCount >= 2){
+    const countFl = document.createElement('div');
+    countFl.className = 'floater';
+    countFl.style.cssText = 'left:50%;top:56%;font-size:15px;font-weight:800;color:#E07A3C;';
+    countFl.textContent = `오늘 ${todayCount}번째예요! 정말 잘했어요 👏`;
+    document.body.appendChild(countFl);
+    setTimeout(()=>countFl.remove(), 1600);
+  }
 
   // 모달 업데이트
   const live = document.getElementById('mLive');
