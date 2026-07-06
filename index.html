@@ -1510,10 +1510,11 @@ function triggerPWAInstall(){
               <div id="obsSoundPreview" style="margin-top:8px"></div>
             </div>
 
-            <button onclick="saveObservation()"
+            <button id="obsSaveBtn" onclick="saveObservation()"
               style="width:100%;background:linear-gradient(135deg,#3D7A4A,#6FB37C);color:#fff;
               border:none;border-radius:14px;padding:14px;font-family:inherit;font-size:15px;
-              font-weight:900;cursor:pointer;box-shadow:0 4px 12px rgba(61,122,74,.3)">
+              font-weight:900;cursor:pointer;box-shadow:0 4px 12px rgba(61,122,74,.3);
+              transition:all .2s">
               ✅ 관찰 기록 저장
             </button>
           </div>
@@ -1632,10 +1633,11 @@ function triggerPWAInstall(){
             <div id="teacherSoundPreview" style="margin-top:8px"></div>
           </div>
 
-          <button onclick="saveTeacherObservation()"
+          <button id="teacherObsSaveBtn" onclick="saveTeacherObservation()"
             style="width:100%;background:linear-gradient(135deg,#3F8AA6,#5B8FA8);color:#fff;
             border:none;border-radius:14px;padding:14px;font-family:inherit;font-size:15px;
-            font-weight:900;cursor:pointer;box-shadow:0 4px 12px rgba(63,138,166,.3)">
+            font-weight:900;cursor:pointer;box-shadow:0 4px 12px rgba(63,138,166,.3);
+            transition:all .2s">
             ✅ 교사 관찰 기록 저장
           </button>
         </div>
@@ -6103,14 +6105,20 @@ async function saveTeacherObservation(){
   if(_teacherSaveLock) return;
   _teacherSaveLock = true;
 
-  const saveBtn = document.querySelector('[onclick="saveTeacherObservation()"]');
-  if(saveBtn){ saveBtn.textContent = '⏳ 저장 중...'; saveBtn.style.opacity='0.6'; }
+  const saveBtn = document.getElementById('teacherObsSaveBtn');
+  // 즉시 버튼 색 변경
+  if(saveBtn){
+    saveBtn.style.background = '#aaa';
+    saveBtn.textContent = '⏳ 저장 중...';
+    saveBtn.style.transform = 'scale(0.97)';
+  }
 
   const name = (document.getElementById('teacherObsName').value||'').trim();
   const content = (document.getElementById('teacherObsContent').value||'').trim();
   const feeling = (document.getElementById('teacherObsFeeling').value||'').trim();
-  if(!name){ alert('교사 이름을 입력해주세요!'); _teacherSaveLock=false; if(saveBtn){saveBtn.textContent='✅ 교사 관찰 기록 저장';saveBtn.style.opacity='';} return; }
-  if(!content && !feeling){ alert('관찰 내용 또는 느낀 점을 입력해주세요!'); _teacherSaveLock=false; if(saveBtn){saveBtn.textContent='✅ 교사 관찰 기록 저장';saveBtn.style.opacity='';} return; }
+  const resetTeacherBtn = ()=>{ if(saveBtn){ saveBtn.style.background='linear-gradient(135deg,#3F8AA6,#5B8FA8)'; saveBtn.textContent='✅ 교사 관찰 기록 저장'; saveBtn.style.transform=''; } };
+  if(!name){ alert('교사 이름을 입력해주세요!'); _teacherSaveLock=false; resetTeacherBtn(); return; }
+  if(!content && !feeling){ alert('관찰 내용 또는 느낀 점을 입력해주세요!'); _teacherSaveLock=false; resetTeacherBtn(); return; }
 
   const targetLabel = teacherObsPickSel.length > 0 ? teacherObsPickSel.join(', ') : '전체';
   const folder = 'teacher_obs';
@@ -6146,7 +6154,15 @@ async function saveTeacherObservation(){
   const savedSound=teacherSoundFile;
   teacherObsPhotoFiles=[]; teacherObsPickSel=[]; teacherAudioFiles=[]; teacherSoundFile=null;
   renderTeacherObsPick();
-  if(saveBtn){ saveBtn.textContent='✅ 교사 관찰 기록 저장'; saveBtn.style.opacity=''; }
+  if(saveBtn){
+    saveBtn.style.background = 'linear-gradient(135deg,#2A6A88,#3A7A98)';
+    saveBtn.textContent = '✅ 저장됐어요!';
+    saveBtn.style.transform = '';
+    setTimeout(()=>{
+      saveBtn.style.background = 'linear-gradient(135deg,#3F8AA6,#5B8FA8)';
+      saveBtn.textContent = '✅ 교사 관찰 기록 저장';
+    }, 2500);
+  }
   _teacherSaveLock = false;
   alert('✅ 교사 관찰 기록이 저장됐어요!');
 
@@ -6383,12 +6399,28 @@ async function saveObservation(){
   if(_obsSaveLock) return;
   _obsSaveLock = true;
 
-  if(!obsPickSel){ alert('이름을 선택해주세요!'); _obsSaveLock=false; return; }
+  const saveBtn = document.getElementById('obsSaveBtn');
+  // 즉시 버튼 색 변경 — 눌렸다는 피드백
+  if(saveBtn){
+    saveBtn.style.background = '#aaa';
+    saveBtn.textContent = '⏳ 저장 중...';
+    saveBtn.style.transform = 'scale(0.97)';
+  }
+
+  if(!obsPickSel){
+    alert('이름을 선택해주세요!');
+    _obsSaveLock=false;
+    if(saveBtn){ saveBtn.style.background='linear-gradient(135deg,#3D7A4A,#6FB37C)'; saveBtn.textContent='✅ 관찰 기록 저장'; saveBtn.style.transform=''; }
+    return;
+  }
   const discover=(document.getElementById('obsDiscover').value||'').trim();
   const feeling=(document.getElementById('obsFeeling').value||'').trim();
   const camPhotos=obsCameraPhotos.filter(Boolean);
   if(!discover&&!feeling&&obsPhotoFiles.length===0&&camPhotos.length===0&&obsAudioFiles.length===0){
-    alert('발견한 것, 느낌, 사진, 녹음 중 하나라도 입력해주세요!'); _obsSaveLock=false; return;
+    alert('발견한 것, 느낌, 사진, 녹음 중 하나라도 입력해주세요!');
+    _obsSaveLock=false;
+    if(saveBtn){ saveBtn.style.background='linear-gradient(135deg,#3D7A4A,#6FB37C)'; saveBtn.textContent='✅ 관찰 기록 저장'; saveBtn.style.transform=''; }
+    return;
   }
 
   // ① 텍스트 먼저 즉시 Firebase 저장
@@ -6418,6 +6450,17 @@ async function saveObservation(){
   const savedAudioFiles=[...obsAudioFiles];
   obsPhotoFiles=[]; obsCameraPhotos=[]; obsAudioFiles=[];
   closeObsCamera();
+
+  // 버튼 완료 상태로 변경
+  if(saveBtn){
+    saveBtn.style.background = 'linear-gradient(135deg,#2A5C3A,#4A9A5C)';
+    saveBtn.textContent = '✅ 저장됐어요!';
+    saveBtn.style.transform = '';
+    setTimeout(()=>{
+      saveBtn.style.background = 'linear-gradient(135deg,#3D7A4A,#6FB37C)';
+      saveBtn.textContent = '✅ 관찰 기록 저장';
+    }, 2500);
+  }
   _obsSaveLock = false;
   alert(`✅ ${obsPickSel}의 관찰 기록이 저장됐어요! 🌿`);
 
