@@ -6106,42 +6106,39 @@ async function saveTeacherObservation(){
   _teacherSaveLock = true;
 
   const saveBtn = document.getElementById('teacherObsSaveBtn');
-  // 즉시 버튼 색 변경
-  if(saveBtn){
-    saveBtn.style.background = '#aaa';
-    saveBtn.textContent = '⏳ 저장 중...';
-    saveBtn.style.transform = 'scale(0.97)';
-  }
+  const resetBtn = ()=>{
+    if(saveBtn){ saveBtn.style.background='linear-gradient(135deg,#3F8AA6,#5B8FA8)'; saveBtn.textContent='✅ 교사 관찰 기록 저장'; saveBtn.style.transform=''; }
+    _teacherSaveLock = false;
+  };
+
+  if(saveBtn){ saveBtn.style.background='#aaa'; saveBtn.textContent='⏳ 저장 중...'; saveBtn.style.transform='scale(0.97)'; }
 
   const name = (document.getElementById('teacherObsName').value||'').trim();
   const content = (document.getElementById('teacherObsContent').value||'').trim();
   const feeling = (document.getElementById('teacherObsFeeling').value||'').trim();
-  const resetTeacherBtn = ()=>{ if(saveBtn){ saveBtn.style.background='linear-gradient(135deg,#3F8AA6,#5B8FA8)'; saveBtn.textContent='✅ 교사 관찰 기록 저장'; saveBtn.style.transform=''; } };
-  if(!name){ alert('교사 이름을 입력해주세요!'); _teacherSaveLock=false; resetTeacherBtn(); return; }
-  if(!content && !feeling){ alert('관찰 내용 또는 느낀 점을 입력해주세요!'); _teacherSaveLock=false; resetTeacherBtn(); return; }
+
+  if(!name){ alert('교사 이름을 입력해주세요!'); resetBtn(); return; }
+  if(!content && !feeling){ alert('관찰 내용 또는 느낀 점을 입력해주세요!'); resetBtn(); return; }
 
   const targetLabel = teacherObsPickSel.length > 0 ? teacherObsPickSel.join(', ') : '전체';
   const folder = 'teacher_obs';
   const now = new Date();
 
-  // ① 텍스트 먼저 즉시 저장
-  const entry = {
-    teacherName: name, studentId: targetLabel,
-    content, feeling, photos: [], audio: [], sound: null, date: now
-  };
+  const entry = { teacherName:name, studentId:targetLabel, content, feeling, photos:[], audio:[], sound:null, date:now };
   teacherObsLogs.push(entry);
 
-  let fbRef = null;
-  if(typeof _fbDB !== 'undefined' && _fbDB){
-    fbRef = _fbDB.ref('teacherObs').push({
-      teacherName: name, studentId: targetLabel,
-      content, feeling, photos: [], audio: [], sound: null, ts: now.getTime()
-    });
-  }
+  let fbKey = null;
+  try {
+    if(typeof _fbDB !== 'undefined' && _fbDB){
+      const ref = _fbDB.ref('teacherObs').push();
+      fbKey = ref.key;
+      await ref.set({ teacherName:name, studentId:targetLabel, content, feeling, photos:[], audio:[], sound:null, ts:now.getTime() });
+      entry.fbKey = fbKey;
+    }
+  } catch(e){ console.error('Firebase 저장 오류:', e); }
 
   renderTeacherObserveList();
 
-  // ② 입력창 즉시 초기화 (사용자에게 완료된 것처럼 보임)
   document.getElementById('teacherObsName').value='';
   document.getElementById('teacherObsContent').value='';
   document.getElementById('teacherObsFeeling').value='';
@@ -6154,20 +6151,17 @@ async function saveTeacherObservation(){
   const savedSound=teacherSoundFile;
   teacherObsPhotoFiles=[]; teacherObsPickSel=[]; teacherAudioFiles=[]; teacherSoundFile=null;
   renderTeacherObsPick();
+
   if(saveBtn){
-    saveBtn.style.background = 'linear-gradient(135deg,#2A6A88,#3A7A98)';
-    saveBtn.textContent = '✅ 저장됐어요!';
-    saveBtn.style.transform = '';
-    setTimeout(()=>{
-      saveBtn.style.background = 'linear-gradient(135deg,#3F8AA6,#5B8FA8)';
-      saveBtn.textContent = '✅ 교사 관찰 기록 저장';
-    }, 2500);
+    saveBtn.style.background='linear-gradient(135deg,#2A6A88,#3A7A98)';
+    saveBtn.textContent='✅ 저장됐어요!';
+    saveBtn.style.transform='';
+    setTimeout(()=>{ saveBtn.style.background='linear-gradient(135deg,#3F8AA6,#5B8FA8)'; saveBtn.textContent='✅ 교사 관찰 기록 저장'; }, 2500);
   }
   _teacherSaveLock = false;
   alert('✅ 교사 관찰 기록이 저장됐어요!');
 
-  // ③ 사진/음성은 백그라운드에서 업로드 (기다리지 않음)
-  if(savedPhotos.length > 0 || savedAudio.length > 0 || savedSound){
+  if((savedPhotos.length>0 || savedAudio.length>0 || savedSound) && fbKey){
     (async()=>{
       try {
         const photoUrls = await Promise.all(savedPhotos.map(async f=>{
@@ -6183,10 +6177,8 @@ async function saveTeacherObservation(){
           const r=await new Promise(res=>{const fr=new FileReader();fr.onload=e=>res(e.target.result);fr.readAsDataURL(savedSound);});
           soundUrl=await uploadToCloudinary(r,folder).catch(()=>null);
         }
-        // 로컬 entry 업데이트
         entry.photos=photoUrls; entry.audio=audioUrls; entry.sound=soundUrl;
-        // Firebase 업데이트
-        if(fbRef) fbRef.then(ref=>ref.update({photos:photoUrls,audio:audioUrls,sound:soundUrl})).catch(()=>{});
+        if(_fbDB) _fbDB.ref('teacherObs/'+fbKey).update({photos:photoUrls,audio:audioUrls,sound:soundUrl});
         renderTeacherObserveList();
       } catch(e){ console.error('백그라운드 업로드 오류:', e); }
     })();
