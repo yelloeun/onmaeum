@@ -6098,55 +6098,42 @@ function teacherObsPreviewPhotos(input){
   });
 }
 
+let _teacherSaveLock = false;
 async function saveTeacherObservation(){
+  if(_teacherSaveLock) return;
+  _teacherSaveLock = true;
+
+  const saveBtn = document.querySelector('[onclick="saveTeacherObservation()"]');
+  if(saveBtn){ saveBtn.textContent = '⏳ 저장 중...'; saveBtn.style.opacity='0.6'; }
+
   const name = (document.getElementById('teacherObsName').value||'').trim();
   const content = (document.getElementById('teacherObsContent').value||'').trim();
   const feeling = (document.getElementById('teacherObsFeeling').value||'').trim();
-  if(!name){ alert('교사 이름을 입력해주세요!'); return; }
-  if(!content && !feeling){ alert('관찰 내용 또는 느낀 점을 입력해주세요!'); return; }
+  if(!name){ alert('교사 이름을 입력해주세요!'); _teacherSaveLock=false; if(saveBtn){saveBtn.textContent='✅ 교사 관찰 기록 저장';saveBtn.style.opacity='';} return; }
+  if(!content && !feeling){ alert('관찰 내용 또는 느낀 점을 입력해주세요!'); _teacherSaveLock=false; if(saveBtn){saveBtn.textContent='✅ 교사 관찰 기록 저장';saveBtn.style.opacity='';} return; }
 
-  const targetIds = teacherObsPickSel.length > 0 ? teacherObsPickSel : ['전체'];
-  const targetLabel = teacherObsPickSel.length > 0
-    ? teacherObsPickSel.join(', ')
-    : '전체';
-  const photoUrls = await Promise.all(teacherObsPhotoFiles.map(async f=>{
-    const r = await new Promise(res=>{const fr=new FileReader();fr.onload=e=>res(e.target.result);fr.readAsDataURL(f);});
-    return uploadToCloudinary(r, folder).catch(()=>r);
-  }));
-
-  // 녹음 파일 업로드
-  const audioUrls = await Promise.all(teacherAudioFiles.map(async a=>{
-    const url = await uploadToCloudinary(a.blob, folder).catch(()=>null);
-    return url ? {url, name:a.name} : {url:a.url, name:a.name};
-  }));
-
-  // MP3 소리산책 업로드
-  let soundUrl = null;
-  if(teacherSoundFile){
-    const r = await new Promise(res=>{const fr=new FileReader();fr.onload=e=>res(e.target.result);fr.readAsDataURL(teacherSoundFile);});
-    soundUrl = await uploadToCloudinary(r, folder).catch(()=>null);
-  }
-
+  const targetLabel = teacherObsPickSel.length > 0 ? teacherObsPickSel.join(', ') : '전체';
+  const folder = 'teacher_obs';
   const now = new Date();
+
+  // ① 텍스트 먼저 즉시 저장
   const entry = {
     teacherName: name, studentId: targetLabel,
-    content, feeling, photos: photoUrls, audio: audioUrls,
-    sound: soundUrl, date: now
+    content, feeling, photos: [], audio: [], sound: null, date: now
   };
-
   teacherObsLogs.push(entry);
 
+  let fbRef = null;
   if(typeof _fbDB !== 'undefined' && _fbDB){
-    _fbDB.ref('teacherObs').push({
+    fbRef = _fbDB.ref('teacherObs').push({
       teacherName: name, studentId: targetLabel,
-      content, feeling, photos: photoUrls, audio: audioUrls,
-      sound: soundUrl, ts: now.getTime()
-    }).catch(()=>{});
+      content, feeling, photos: [], audio: [], sound: null, ts: now.getTime()
+    });
   }
 
   renderTeacherObserveList();
 
-  // 초기화
+  // ② 입력창 즉시 초기화 (사용자에게 완료된 것처럼 보임)
   document.getElementById('teacherObsName').value='';
   document.getElementById('teacherObsContent').value='';
   document.getElementById('teacherObsFeeling').value='';
@@ -6154,12 +6141,40 @@ async function saveTeacherObservation(){
   document.getElementById('teacherAudioList').innerHTML='';
   document.getElementById('teacherSoundPreview').innerHTML='';
   document.getElementById('teacherSoundInput').value='';
-  teacherObsPhotoFiles=[];
-  teacherObsPickSel=[];
-  teacherAudioFiles=[];
-  teacherSoundFile=null;
+  const savedPhotos=[...teacherObsPhotoFiles];
+  const savedAudio=[...teacherAudioFiles];
+  const savedSound=teacherSoundFile;
+  teacherObsPhotoFiles=[]; teacherObsPickSel=[]; teacherAudioFiles=[]; teacherSoundFile=null;
   renderTeacherObsPick();
-  alert(`✅ 교사 관찰 기록이 저장됐어요!`);
+  if(saveBtn){ saveBtn.textContent='✅ 교사 관찰 기록 저장'; saveBtn.style.opacity=''; }
+  _teacherSaveLock = false;
+  alert('✅ 교사 관찰 기록이 저장됐어요!');
+
+  // ③ 사진/음성은 백그라운드에서 업로드 (기다리지 않음)
+  if(savedPhotos.length > 0 || savedAudio.length > 0 || savedSound){
+    (async()=>{
+      try {
+        const photoUrls = await Promise.all(savedPhotos.map(async f=>{
+          const r=await new Promise(res=>{const fr=new FileReader();fr.onload=e=>res(e.target.result);fr.readAsDataURL(f);});
+          return uploadToCloudinary(r,folder).catch(()=>r);
+        }));
+        const audioUrls = await Promise.all(savedAudio.map(async a=>{
+          const url=await uploadToCloudinary(a.blob,folder).catch(()=>null);
+          return url?{url,name:a.name}:{url:a.url,name:a.name};
+        }));
+        let soundUrl = null;
+        if(savedSound){
+          const r=await new Promise(res=>{const fr=new FileReader();fr.onload=e=>res(e.target.result);fr.readAsDataURL(savedSound);});
+          soundUrl=await uploadToCloudinary(r,folder).catch(()=>null);
+        }
+        // 로컬 entry 업데이트
+        entry.photos=photoUrls; entry.audio=audioUrls; entry.sound=soundUrl;
+        // Firebase 업데이트
+        if(fbRef) fbRef.then(ref=>ref.update({photos:photoUrls,audio:audioUrls,sound:soundUrl})).catch(()=>{});
+        renderTeacherObserveList();
+      } catch(e){ console.error('백그라운드 업로드 오류:', e); }
+    })();
+  }
 }
 
 function deleteTeacherObs(idx){
@@ -6363,53 +6378,69 @@ function renderObsAudioList(){
 }
 function obsRemoveAudio(i){ URL.revokeObjectURL(obsAudioFiles[i].url); obsAudioFiles.splice(i,1); renderObsAudioList(); }
 
+let _obsSaveLock = false;
 async function saveObservation(){
-  if(!obsPickSel){ alert('이름을 선택해주세요!'); return; }
+  if(_obsSaveLock) return;
+  _obsSaveLock = true;
+
+  if(!obsPickSel){ alert('이름을 선택해주세요!'); _obsSaveLock=false; return; }
   const discover=(document.getElementById('obsDiscover').value||'').trim();
   const feeling=(document.getElementById('obsFeeling').value||'').trim();
   const camPhotos=obsCameraPhotos.filter(Boolean);
   if(!discover&&!feeling&&obsPhotoFiles.length===0&&camPhotos.length===0&&obsAudioFiles.length===0){
-    alert('발견한 것, 느낌, 사진, 녹음 중 하나라도 입력해주세요!'); return;
+    alert('발견한 것, 느낌, 사진, 녹음 중 하나라도 입력해주세요!'); _obsSaveLock=false; return;
   }
 
-  // 사진 업로드 (Cloudinary)
+  // ① 텍스트 먼저 즉시 Firebase 저장
   const folder=`observe/${obsPickSel}`;
-  const camUrls = await Promise.all(camPhotos.map(dp=>uploadToCloudinary(dp,folder).catch(()=>dp)));
-  const galleryUrls = await Promise.all(obsPhotoFiles.map(async f=>{
-    const r=await new Promise(res=>{const fr=new FileReader();fr.onload=e=>res(e.target.result);fr.readAsDataURL(f);});
-    return uploadToCloudinary(r,folder).catch(()=>r);
-  }));
-  const allPhotos=[...camUrls,...galleryUrls];
-  const audioUrls=await Promise.all(obsAudioFiles.map(async a=>{
-    const url=await uploadToCloudinary(a.blob,folder).catch(()=>null);
-    return url?{url,name:a.name}:{url:a.url,name:a.name};
-  }));
-
   const now=new Date();
-  const entry={studentId:obsPickSel,discover,feeling,photos:allPhotos,audio:audioUrls,date:now};
+  const entry={studentId:obsPickSel,discover,feeling,photos:[],audio:[],date:now};
 
-  // Firebase 저장
+  let fbRef = null;
   if(typeof _fbDB!=='undefined'&&_fbDB){
-    _fbDB.ref('observations').push({
+    fbRef = _fbDB.ref('observations').push({
       studentId:obsPickSel, discover, feeling,
-      photos:allPhotos, audio:audioUrls, ts:now.getTime()
-    }).catch(()=>{});
+      photos:[], audio:[], ts:now.getTime()
+    });
   }
 
-  // 로컬에 추가 후 오른쪽 목록 갱신
   observationLogs.push(entry);
   renderObserveList();
 
-  // 입력 초기화
+  // ② 입력창 즉시 초기화
   document.getElementById('obsDiscover').value='';
   document.getElementById('obsFeeling').value='';
   document.getElementById('obsPhotoInput').value='';
   document.getElementById('obsPhotoPreview').innerHTML='';
   document.getElementById('obsAudioList').innerHTML='';
+  const savedCamPhotos=[...camPhotos];
+  const savedPhotoFiles=[...obsPhotoFiles];
+  const savedAudioFiles=[...obsAudioFiles];
   obsPhotoFiles=[]; obsCameraPhotos=[]; obsAudioFiles=[];
   closeObsCamera();
-
+  _obsSaveLock = false;
   alert(`✅ ${obsPickSel}의 관찰 기록이 저장됐어요! 🌿`);
+
+  // ③ 사진/음성 백그라운드 업로드
+  if(savedCamPhotos.length>0 || savedPhotoFiles.length>0 || savedAudioFiles.length>0){
+    (async()=>{
+      try {
+        const camUrls=await Promise.all(savedCamPhotos.map(dp=>uploadToCloudinary(dp,folder).catch(()=>dp)));
+        const galleryUrls=await Promise.all(savedPhotoFiles.map(async f=>{
+          const r=await new Promise(res=>{const fr=new FileReader();fr.onload=e=>res(e.target.result);fr.readAsDataURL(f);});
+          return uploadToCloudinary(r,folder).catch(()=>r);
+        }));
+        const allPhotos=[...camUrls,...galleryUrls];
+        const audioUrls=await Promise.all(savedAudioFiles.map(async a=>{
+          const url=await uploadToCloudinary(a.blob,folder).catch(()=>null);
+          return url?{url,name:a.name}:{url:a.url,name:a.name};
+        }));
+        entry.photos=allPhotos; entry.audio=audioUrls;
+        if(fbRef) fbRef.then(ref=>ref.update({photos:allPhotos,audio:audioUrls})).catch(()=>{});
+        renderObserveList();
+      } catch(e){ console.error('백그라운드 업로드 오류:', e); }
+    })();
+  }
 }
 
 function renderObserveList(){
