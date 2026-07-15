@@ -2201,7 +2201,15 @@ function triggerPWAInstall(){
 
               <!-- 대표 사진 -->
               <div style="background:#f8f8f4;border-radius:10px;padding:12px;border:1px solid #e8e8e0;margin-bottom:10px">
-                <div style="font-size:11px;color:#888;margin-bottom:8px">대표 활동 사진 (최대 4장 — 갤러리에서 선택)</div>
+                <div style="font-size:11px;color:#888;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between">
+                  <span>대표 활동 사진 (최대 4장)</span>
+                  <label style="display:flex;align-items:center;gap:4px;background:#EEF6E8;border:1.5px solid var(--accent);border-radius:999px;padding:3px 10px;cursor:pointer;font-size:11px;font-weight:700;color:var(--accent)">
+                    <input type="file" accept="image/*" multiple id="reportLocalPhotoInput"
+                      onchange="addReportLocalPhotos(this)" style="display:none">
+                    📁 내 컴퓨터에서 선택
+                  </label>
+                </div>
+                <div style="font-size:10px;color:#aaa;margin-bottom:6px">갤러리에서 선택하거나 내 컴퓨터에서 직접 불러올 수 있어요</div>
                 <div id="reportPhotoPick" style="display:flex;gap:6px;flex-wrap:wrap"></div>
                 <div id="reportPhotoSelected" style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:8px"></div>
               </div>
@@ -3796,6 +3804,43 @@ function renderReportPhotoPick(){
     </div>`).join('');
 }
 
+function addReportLocalPhotos(input){
+  const files = Array.from(input.files);
+  if(!files.length) return;
+  const remaining = 4 - reportSelectedPhotos.length;
+  if(remaining <= 0){ alert('최대 4장까지 선택할 수 있어요!'); return; }
+
+  files.slice(0, remaining).forEach(file=>{
+    const reader = new FileReader();
+    reader.onload = e=>{
+      const url = e.target.result;
+      if(reportSelectedPhotos.length >= 4){ return; }
+      reportSelectedPhotos.push(url);
+      // 선택된 사진 표시
+      const selEl = document.getElementById('reportPhotoSelected');
+      if(selEl) selEl.innerHTML = reportSelectedPhotos.map((u,i)=>`
+        <div style="position:relative;aspect-ratio:1;border-radius:8px;overflow:hidden;border:1px solid #e0e0e0">
+          <img src="${u}" style="width:100%;height:100%;object-fit:cover">
+          <button onclick="removeReportPhoto(${i})" style="position:absolute;top:3px;right:3px;background:rgba(0,0,0,.5);border:none;border-radius:50%;color:#fff;width:18px;height:18px;font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1">✕</button>
+        </div>`).join('');
+    };
+    reader.readAsDataURL(file);
+  });
+  input.value = '';
+}
+
+function removeReportPhoto(idx){
+  reportSelectedPhotos.splice(idx, 1);
+  const selEl = document.getElementById('reportPhotoSelected');
+  if(selEl) selEl.innerHTML = reportSelectedPhotos.map((u,i)=>`
+    <div style="position:relative;aspect-ratio:1;border-radius:8px;overflow:hidden;border:1px solid #e0e0e0">
+      <img src="${u}" style="width:100%;height:100%;object-fit:cover">
+      <button onclick="removeReportPhoto(${i})" style="position:absolute;top:3px;right:3px;background:rgba(0,0,0,.5);border:none;border-radius:50%;color:#fff;width:18px;height:18px;font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1">✕</button>
+    </div>`).join('');
+  // 갤러리 선택 표시도 업데이트
+  renderReportPhotoPick();
+}
+
 function toggleReportPhoto(idx){
   const el=document.getElementById(`rpick-${idx}`);
   const url=galleryPhotos[idx]?.url;
@@ -3805,7 +3850,7 @@ function toggleReportPhoto(idx){
   else if(reportSelectedPhotos.length<4){ reportSelectedPhotos.push(url); el.style.borderColor='#3B6D11'; }
   else { alert('최대 4장까지 선택할 수 있어요!'); return; }
   const selEl=document.getElementById('reportPhotoSelected');
-  if(selEl) selEl.innerHTML=reportSelectedPhotos.map(u=>`<div style="aspect-ratio:1;border-radius:8px;overflow:hidden;border:1px solid #e0e0e0"><img src="${u}" style="width:100%;height:100%;object-fit:cover"></div>`).join('');
+  if(selEl) selEl.innerHTML=reportSelectedPhotos.map((u,i)=>`<div style="position:relative;aspect-ratio:1;border-radius:8px;overflow:hidden;border:1px solid #e0e0e0"><img src="${u}" style="width:100%;height:100%;object-fit:cover"><button onclick="removeReportPhoto(${i})" style="position:absolute;top:3px;right:3px;background:rgba(0,0,0,.5);border:none;border-radius:50%;color:#fff;width:18px;height:18px;font-size:11px;cursor:pointer;line-height:1">✕</button></div>`).join('');
 }
 
 function printReport(){
