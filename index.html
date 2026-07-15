@@ -2202,16 +2202,18 @@ function triggerPWAInstall(){
               <!-- 대표 사진 -->
               <div style="background:#f8f8f4;border-radius:10px;padding:12px;border:1px solid #e8e8e0;margin-bottom:10px">
                 <div style="font-size:11px;color:#888;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between">
-                  <span>대표 활동 사진 (최대 4장)</span>
-                  <label style="display:flex;align-items:center;gap:4px;background:#EEF6E8;border:1.5px solid var(--accent);border-radius:999px;padding:3px 10px;cursor:pointer;font-size:11px;font-weight:700;color:var(--accent)">
+                  <span style="font-weight:700">📸 대표 활동 사진 (최대 4장)</span>
+                  <label style="display:flex;align-items:center;gap:4px;background:#EEF6E8;border:1.5px solid var(--accent);border-radius:999px;padding:4px 12px;cursor:pointer;font-size:11px;font-weight:700;color:var(--accent);white-space:nowrap">
                     <input type="file" accept="image/*" multiple id="reportLocalPhotoInput"
                       onchange="addReportLocalPhotos(this)" style="display:none">
                     📁 내 컴퓨터에서 선택
                   </label>
                 </div>
-                <div style="font-size:10px;color:#aaa;margin-bottom:6px">갤러리에서 선택하거나 내 컴퓨터에서 직접 불러올 수 있어요</div>
+                <!-- 선택된 사진 미리보기 -->
+                <div id="reportPhotoSelected" style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:8px"></div>
+                <!-- 갤러리 사진 전체 -->
+                <div style="font-size:10px;color:#aaa;margin-bottom:5px">갤러리에서 클릭해서 선택 (선택된 사진은 초록 테두리)</div>
                 <div id="reportPhotoPick" style="display:flex;gap:6px;flex-wrap:wrap"></div>
-                <div id="reportPhotoSelected" style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:8px"></div>
               </div>
             </div>
           </div>
@@ -3795,13 +3797,45 @@ async function generateReportComment(){
 function renderReportPhotoPick(){
   const el=document.getElementById('reportPhotoPick');
   if(!el) return;
-  const photos=galleryPhotos.slice(0,12);
-  if(photos.length===0){ el.innerHTML=`<div style="font-size:12px;color:#aaa">갤러리에 사진이 없어요</div>`; return; }
-  el.innerHTML=photos.map((p,i)=>`
-    <div onclick="toggleReportPhoto(${i})" id="rpick-${i}"
-      style="width:52px;height:52px;border-radius:8px;overflow:hidden;cursor:pointer;border:2px solid transparent;flex-shrink:0">
-      <img src="${p.url}" style="width:100%;height:100%;object-fit:cover">
-    </div>`).join('');
+
+  // galleryPhotos가 비어있으면 Firebase에서 직접 불러오기
+  if(galleryPhotos.length===0 && typeof _fbDB!=='undefined' && _fbDB){
+    el.innerHTML=`<div style="font-size:12px;color:#aaa;padding:8px">📷 사진 불러오는 중...</div>`;
+    Promise.all([
+      _fbDB.ref('gallery').once('value'),
+      _fbDB.ref('observations').once('value'),
+      _fbDB.ref('memos').once('value'),
+    ]).then(([gSnap, oSnap, mSnap])=>{
+      galleryPhotos.length=0;
+      const gData=gSnap.val()||{};
+      Object.entries(gData).forEach(([k,v])=>{ if(v.url) galleryPhotos.push({fbKey:k,source:'gallery',url:v.url,ts:v.ts||0}); });
+      const oData=oSnap.val()||{};
+      Object.entries(oData).forEach(([k,v])=>{ (v.photos||[]).forEach(url=>galleryPhotos.push({source:'obs',url,ts:v.ts||0})); });
+      const mData=mSnap.val()||{};
+      Object.entries(mData).forEach(([k,v])=>{ (v.photos||[]).forEach(url=>galleryPhotos.push({source:'memo',url,ts:v.ts||0})); });
+      galleryPhotos.sort((a,b)=>b.ts-a.ts);
+      _drawReportPhotoPick(el);
+    }).catch(()=>{ el.innerHTML=`<div style="font-size:12px;color:#aaa">사진을 불러오지 못했어요</div>`; });
+    return;
+  }
+  _drawReportPhotoPick(el);
+}
+
+function _drawReportPhotoPick(el){
+  if(galleryPhotos.length===0){
+    el.innerHTML=`<div style="font-size:12px;color:#aaa">갤러리에 사진이 없어요</div>`;
+    return;
+  }
+  el.innerHTML=`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(60px,1fr));gap:6px;max-height:200px;overflow-y:auto;padding:2px">
+    ${galleryPhotos.map((p,i)=>`
+      <div onclick="toggleReportPhoto(${i})" id="rpick-${i}"
+        style="aspect-ratio:1;border-radius:8px;overflow:hidden;cursor:pointer;
+        border:3px solid transparent;transition:border-color .15s;position:relative">
+        <img src="${p.url}" style="width:100%;height:100%;object-fit:cover">
+        <div id="rpick-check-${i}" style="display:none;position:absolute;inset:0;background:rgba(61,122,74,.4);
+          align-items:center;justify-content:center;font-size:20px">✓</div>
+      </div>`).join('')}
+  </div>`;
 }
 
 function addReportLocalPhotos(input){
@@ -3816,13 +3850,7 @@ function addReportLocalPhotos(input){
       const url = e.target.result;
       if(reportSelectedPhotos.length >= 4){ return; }
       reportSelectedPhotos.push(url);
-      // 선택된 사진 표시
-      const selEl = document.getElementById('reportPhotoSelected');
-      if(selEl) selEl.innerHTML = reportSelectedPhotos.map((u,i)=>`
-        <div style="position:relative;aspect-ratio:1;border-radius:8px;overflow:hidden;border:1px solid #e0e0e0">
-          <img src="${u}" style="width:100%;height:100%;object-fit:cover">
-          <button onclick="removeReportPhoto(${i})" style="position:absolute;top:3px;right:3px;background:rgba(0,0,0,.5);border:none;border-radius:50%;color:#fff;width:18px;height:18px;font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1">✕</button>
-        </div>`).join('');
+      _updateReportPhotoSelected();
     };
     reader.readAsDataURL(file);
   });
@@ -3831,26 +3859,44 @@ function addReportLocalPhotos(input){
 
 function removeReportPhoto(idx){
   reportSelectedPhotos.splice(idx, 1);
-  const selEl = document.getElementById('reportPhotoSelected');
-  if(selEl) selEl.innerHTML = reportSelectedPhotos.map((u,i)=>`
-    <div style="position:relative;aspect-ratio:1;border-radius:8px;overflow:hidden;border:1px solid #e0e0e0">
-      <img src="${u}" style="width:100%;height:100%;object-fit:cover">
-      <button onclick="removeReportPhoto(${i})" style="position:absolute;top:3px;right:3px;background:rgba(0,0,0,.5);border:none;border-radius:50%;color:#fff;width:18px;height:18px;font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1">✕</button>
-    </div>`).join('');
-  // 갤러리 선택 표시도 업데이트
-  renderReportPhotoPick();
+  _updateReportPhotoSelected();
+  // 갤러리 체크 표시 업데이트
+  galleryPhotos.forEach((p,i)=>{
+    const el=document.getElementById(`rpick-${i}`);
+    const chk=document.getElementById(`rpick-check-${i}`);
+    const sel=reportSelectedPhotos.includes(p.url);
+    if(el) el.style.borderColor=sel?'#3B6D11':'transparent';
+    if(chk) chk.style.display=sel?'flex':'none';
+  });
 }
 
 function toggleReportPhoto(idx){
   const el=document.getElementById(`rpick-${idx}`);
+  const chk=document.getElementById(`rpick-check-${idx}`);
   const url=galleryPhotos[idx]?.url;
   if(!url) return;
   const pos=reportSelectedPhotos.indexOf(url);
-  if(pos>=0){ reportSelectedPhotos.splice(pos,1); el.style.borderColor='transparent'; }
-  else if(reportSelectedPhotos.length<4){ reportSelectedPhotos.push(url); el.style.borderColor='#3B6D11'; }
-  else { alert('최대 4장까지 선택할 수 있어요!'); return; }
+  if(pos>=0){
+    reportSelectedPhotos.splice(pos,1);
+    el.style.borderColor='transparent';
+    if(chk) chk.style.display='none';
+  } else if(reportSelectedPhotos.length<4){
+    reportSelectedPhotos.push(url);
+    el.style.borderColor='#3B6D11';
+    if(chk){ chk.style.display='flex'; }
+  } else { alert('최대 4장까지 선택할 수 있어요!'); return; }
+  _updateReportPhotoSelected();
+}
+
+function _updateReportPhotoSelected(){
   const selEl=document.getElementById('reportPhotoSelected');
-  if(selEl) selEl.innerHTML=reportSelectedPhotos.map((u,i)=>`<div style="position:relative;aspect-ratio:1;border-radius:8px;overflow:hidden;border:1px solid #e0e0e0"><img src="${u}" style="width:100%;height:100%;object-fit:cover"><button onclick="removeReportPhoto(${i})" style="position:absolute;top:3px;right:3px;background:rgba(0,0,0,.5);border:none;border-radius:50%;color:#fff;width:18px;height:18px;font-size:11px;cursor:pointer;line-height:1">✕</button></div>`).join('');
+  if(!selEl) return;
+  if(reportSelectedPhotos.length===0){ selEl.innerHTML=''; return; }
+  selEl.innerHTML=reportSelectedPhotos.map((u,i)=>`
+    <div style="position:relative;aspect-ratio:1;border-radius:8px;overflow:hidden;border:2px solid #3B6D11">
+      <img src="${u}" style="width:100%;height:100%;object-fit:cover">
+      <button onclick="removeReportPhoto(${i})" style="position:absolute;top:3px;right:3px;background:rgba(0,0,0,.6);border:none;border-radius:50%;color:#fff;width:20px;height:20px;font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center">✕</button>
+    </div>`).join('');
 }
 
 function printReport(){
@@ -3874,9 +3920,19 @@ function printReport(){
   const pickEl = document.getElementById('reportPhotoPick');
   const regenBtn = document.getElementById('regenBtn');
   const photoLabel = pickEl?.previousElementSibling;
+  const photoSectionTitle = document.querySelector('[for="reportLocalPhotoInput"]')?.closest('div');
+  const localLabel = document.querySelector('label[for="reportLocalPhotoInput"]');
+  // 사진 X버튼들 숨기기
+  const xBtns = document.querySelectorAll('#reportPhotoSelected button');
+  xBtns.forEach(b=>b.style.display='none');
+  // 사진 테두리 제거
+  const photoDivs = document.querySelectorAll('#reportPhotoSelected > div');
+  photoDivs.forEach(d=>{ d.style.border='none'; d.style.position='relative'; });
+
   if(pickEl) pickEl.style.display='none';
   if(regenBtn) regenBtn.style.display='none';
   if(photoLabel && photoLabel.textContent?.includes('갤러리')) photoLabel.style.display='none';
+  if(localLabel) localLabel.style.display='none';
 
   const content = document.getElementById('reportPrintArea').innerHTML;
 
@@ -3886,45 +3942,56 @@ function printReport(){
   if(pickEl) pickEl.style.display='flex';
   if(regenBtn) regenBtn.style.display='';
   if(photoLabel) photoLabel.style.display='';
+  if(localLabel) localLabel.style.display='';
+  xBtns.forEach(b=>b.style.display='');
+  photoDivs.forEach(d=>{ d.style.border='2px solid #3B6D11'; });
 
   const win = window.open('', '_blank');
   win.document.write(`<!DOCTYPE html><html><head>
     <meta charset="UTF-8">
     <title>성장 안내장</title>
     <style>
-      * { box-sizing: border-box; margin: 0; padding: 0; }
-      html, body {
-        font-family: 'Malgun Gothic', '맑은 고딕', sans-serif;
-        width: 210mm;
-        height: 297mm;
-        max-height: 297mm;
-        overflow: hidden;
-        margin: 0 auto;
-        padding: 5mm 9mm;
-        background: #fff;
-        font-size: 10.5px;
+      * { box-sizing:border-box; margin:0; padding:0; }
+      @page { size:A4 portrait; margin:0; }
+      body {
+        font-family:'Malgun Gothic','맑은 고딕',sans-serif;
+        width:210mm; height:297mm;
+        padding:6mm 10mm;
+        background:#fff;
+        font-size:11px;
+        overflow:hidden;
       }
-      @page { size: A4 portrait; margin: 0; }
-      img { max-width: 100%; display: block; }
-      textarea { display: none !important; }
-      #reportPhotoPick, #regenBtn { display: none !important; }
-      /* 이름 섹션 숨기기 */
-      #reportStudentEmoji, #reportStudentName, #reportStudentGrade { display: none !important; }
-      .student-info-row { display: none !important; }
-      [style*="reportStudentEmoji"] { display: none !important; }
-      /* 섹션 여백 최소화 */
-      [style*="border-radius:10px"] { padding: 5px 7px !important; margin-bottom: 5px !important; }
-      [style*="margin-bottom:10px"] { margin-bottom: 5px !important; }
-      /* 사진 그리드 — 높이 제한 */
+      /* 인쇄 시 UI 요소 완전 숨기기 */
+      textarea,
+      #reportPhotoPick,
+      #regenBtn,
+      label { display:none !important; }
+      /* 사진의 X버튼, "내 컴퓨터에서 선택" 등 숨기기 */
+      #reportPhotoSelected button,
+      #reportPhotoSelected > div > button { display:none !important; }
+      /* 사진 섹션 타이틀의 버튼/라벨 숨기기 */
+      [for="reportLocalPhotoInput"] { display:none !important; }
+      /* 사진 그리드 — 크게, 가로 꽉 차게 */
       #reportPhotoSelected {
-        display: grid !important;
-        grid-template-columns: repeat(4, 1fr) !important;
-        gap: 4px !important;
+        display:grid !important;
+        grid-template-columns:repeat(4,1fr) !important;
+        gap:6px !important;
+        margin-top:4px !important;
       }
-      #reportPhotoSelected div { aspect-ratio:1; border-radius:6px; overflow:hidden; max-height:72px; }
-      #reportPhotoSelected img { width:100%; height:100%; object-fit:cover; }
+      #reportPhotoSelected > div {
+        position:relative;
+        aspect-ratio:1;
+        border-radius:8px;
+        overflow:hidden;
+        border:none !important;
+      }
+      #reportPhotoSelected img {
+        width:100%; height:100%; object-fit:cover; display:block;
+      }
       /* SVG */
-      svg { width: 100% !important; height: auto !important; max-height: 160px !important; }
+      svg { width:100% !important; height:auto !important; max-height:170px !important; }
+      /* 섹션 패딩 */
+      [style*="border-radius:10px"] { padding:5px 7px !important; margin-bottom:5px !important; }
     </style>
     <script>window.onload=function(){ window.print(); }<\/script>
   </head><body>${content}</body></html>`);
