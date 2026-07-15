@@ -2515,7 +2515,7 @@ function triggerPWAInstall(){
   <div class="act-confirm">
     <div class="ac-ico" id="acIco">🌱</div>
     <div class="ac-q" id="acQ">오늘 이 활동을 했나요?</div>
-    <button class="ac-yes" id="acYes" onclick="confirmYes()">네! 했어요!</button>
+    <button class="ac-yes" id="acYes" onclick="this.disabled=true; this.style.opacity='0.5'; confirmYes()">네! 했어요!</button>
     <button class="ac-no"  id="acNo"  onclick="closeActConfirm()">아직요.. 다음에 할게요</button>
   </div>
 </div>
@@ -3112,8 +3112,20 @@ function initFirebase(){
   });
 }
 
+// 최근 저장 기록 (중복 방지용)
+const _recentSyncs = {};
+
 // Firebase에 로그 저장
 function syncToSheet(log){
+  // 같은 학생+활동이 3초 이내에 두 번 저장되면 무시
+  const dupKey = `${log.studentId}_${log.activity}`;
+  const now = Date.now();
+  if(_recentSyncs[dupKey] && now - _recentSyncs[dupKey] < 3000){
+    console.warn('중복 저장 차단:', dupKey);
+    return;
+  }
+  _recentSyncs[dupKey] = now;
+
   saveLogToDB(log); // IndexedDB 백업도 유지
   if(_fbDB){
     const entry = {
@@ -3581,37 +3593,24 @@ async function selectReportStudent(id){
       const avg=Math.round(janban.reduce((a,b)=>a+(b.weight||0),0)/janban.length);
       const zero=janban.filter(l=>(l.weight||0)===0).length;
       const fruit=janban.filter(l=>(l.weight||0)<100).length;
-      const maxW = avg<=50?'100%':avg<=100?`${Math.round(avg/200*100)}%`:`${Math.round(Math.min(avg,300)/300*100)}%`;
       const barColor = avg===0?'#7BC87E':avg<=100?'#74B8E0':avg<=150?'#F5A623':'#E07A3C';
       const fruitEmojis = Array(Math.min(fruit,10)).fill('🍎').join('');
       janbanEl.innerHTML=`
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
-          <div style="text-align:center;min-width:52px">
-            <div style="font-size:22px;font-weight:700;color:${barColor}">${avg}g</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:6px">
+          <div style="background:#f0f8f0;border-radius:8px;padding:5px 6px;text-align:center">
+            <div style="font-size:15px;font-weight:700;color:${barColor}">${avg}g</div>
             <div style="font-size:9px;color:#aaa">평균 잔반량</div>
           </div>
-          <div style="flex:1">
-            <div style="background:#e8e8e0;border-radius:999px;height:8px;overflow:hidden;margin-bottom:4px">
-              <div style="width:${Math.min(avg/300*100,100)}%;height:100%;background:${barColor};border-radius:999px;transition:width .6s"></div>
-            </div>
-            <div style="display:flex;justify-content:space-between;font-size:9px;color:#aaa">
-              <span>0g</span><span>300g</span>
-            </div>
+          <div style="background:#f0f8f0;border-radius:8px;padding:5px 6px;text-align:center">
+            <div style="font-size:15px;font-weight:700;color:#3D7A4A">${janban.length}회</div>
+            <div style="font-size:9px;color:#aaa">측정 횟수</div>
           </div>
-        </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px">
-          <div style="background:#f0f8f0;border-radius:8px;padding:6px 8px;text-align:center">
-            <div style="font-size:16px;font-weight:700;color:#3D7A4A">${janban.length}회</div>
-            <div style="font-size:9px;color:#aaa">총 측정 횟수</div>
-          </div>
-          <div style="background:#fff8f0;border-radius:8px;padding:6px 8px;text-align:center">
-            <div style="font-size:16px;font-weight:700;color:#F5A623">${zero}회 🏆</div>
+          <div style="background:#fff8f0;border-radius:8px;padding:5px 6px;text-align:center">
+            <div style="font-size:15px;font-weight:700;color:#F5A623">${zero}회 🏆</div>
             <div style="font-size:9px;color:#aaa">0g 달성</div>
           </div>
         </div>
-        <div style="background:#EAF3DE;border-radius:8px;padding:5px 8px;text-align:center;font-size:11px;color:#3D7A4A;letter-spacing:1px">${fruitEmojis}${fruit>10?`+${fruit-10}`:''}
-          <span style="font-size:9px;color:#639922;margin-left:4px">열매 ${fruit}개 획득!</span>
-        </div>`;
+        <div style="background:#EAF3DE;border-radius:8px;padding:4px 8px;text-align:center;font-size:11px;color:#3D7A4A">${fruitEmojis}${fruit>10?`+${fruit-10}`:''} <span style="font-size:9px;color:#639922">열매 ${fruit}개!</span></div>`
     }
   }
 
@@ -3849,15 +3848,16 @@ function printReport(){
     <title>성장 안내장</title>
     <style>
       * { box-sizing: border-box; margin: 0; padding: 0; }
-      body {
+      html, body {
         font-family: 'Malgun Gothic', '맑은 고딕', sans-serif;
         width: 210mm;
         height: 297mm;
-        margin: 0 auto;
-        padding: 6mm 10mm;
-        background: #fff;
-        font-size: 11px;
+        max-height: 297mm;
         overflow: hidden;
+        margin: 0 auto;
+        padding: 5mm 9mm;
+        background: #fff;
+        font-size: 10.5px;
       }
       @page { size: A4 portrait; margin: 0; }
       img { max-width: 100%; display: block; }
@@ -3865,22 +3865,21 @@ function printReport(){
       #reportPhotoPick, #regenBtn { display: none !important; }
       /* 이름 섹션 숨기기 */
       #reportStudentEmoji, #reportStudentName, #reportStudentGrade { display: none !important; }
-      #reportStudentEmoji { display: none !important; }
       .student-info-row { display: none !important; }
-      /* 학생 정보 행 전체 숨기기 */
       [style*="reportStudentEmoji"] { display: none !important; }
-      /* 사진 그리드 */
+      /* 섹션 여백 최소화 */
+      [style*="border-radius:10px"] { padding: 5px 7px !important; margin-bottom: 5px !important; }
+      [style*="margin-bottom:10px"] { margin-bottom: 5px !important; }
+      /* 사진 그리드 — 높이 제한 */
       #reportPhotoSelected {
         display: grid !important;
         grid-template-columns: repeat(4, 1fr) !important;
-        gap: 5px !important;
+        gap: 4px !important;
       }
-      #reportPhotoSelected div { aspect-ratio:1; border-radius:6px; overflow:hidden; }
+      #reportPhotoSelected div { aspect-ratio:1; border-radius:6px; overflow:hidden; max-height:72px; }
       #reportPhotoSelected img { width:100%; height:100%; object-fit:cover; }
-      /* 그리드 패딩 줄이기 */
-      [style*="border-radius:10px"] { padding: 7px 9px !important; margin-bottom: 7px !important; }
-      /* SVG 크기 고정 */
-      svg { width: 100% !important; height: auto !important; }
+      /* SVG */
+      svg { width: 100% !important; height: auto !important; max-height: 160px !important; }
     </style>
     <script>window.onload=function(){ window.print(); }<\/script>
   </head><body>${content}</body></html>`);
@@ -6998,6 +6997,8 @@ function openActConfirm(idx, ev){
 function closeActConfirm(){
   document.getElementById('actConfirmBg').classList.remove('show');
   confirmItemIdx = null;
+  const yesBtn = document.getElementById('acYes');
+  if(yesBtn){ yesBtn.disabled=false; yesBtn.style.opacity=''; }
 }
 let _confirmYesLock = false;
 function confirmYes(){
