@@ -4019,22 +4019,21 @@ function printReport(){
     alert('선생님의 한마디가 아직 생성 중이에요. 잠시 후 다시 눌러주세요!');
     return;
   }
-
   const s = students.find(x=>x.id===reportStudent);
   if(!s) return;
 
-  // 대시보드에서 각 섹션의 outerHTML을 인라인 스타일까지 포함해서 가져오기
-  const catEl    = document.getElementById('reportCatBars');
-  const kediEl   = document.getElementById('reportKediBars');
-  const janbanEl = document.getElementById('reportJanban');
-  const obsEl    = document.getElementById('reportObserve');
-  const obsTitle = document.getElementById('reportObserveTitle')?.textContent||'아이의 관찰 기록';
+  // 앱의 모든 스타일시트 수집
+  const allCSS = Array.from(document.styleSheets).map(ss=>{
+    try { return Array.from(ss.cssRules).map(r=>r.cssText).join('\n'); }
+    catch(e){ return ''; }
+  }).join('\n');
 
-  // 각 섹션 innerHTML 그대로 복사
-  const catHTML    = catEl?.innerHTML||'';
-  const kediHTML   = kediEl?.innerHTML||'';
-  const janbanHTML = janbanEl?.innerHTML||'';
-  const obsHTML    = obsEl?.innerHTML||'';
+  // 각 섹션 innerHTML 복사
+  const catHTML    = document.getElementById('reportCatBars')?.innerHTML||'';
+  const kediHTML   = document.getElementById('reportKediBars')?.innerHTML||'';
+  const janbanHTML = document.getElementById('reportJanban')?.innerHTML||'';
+  const obsHTML    = document.getElementById('reportObserve')?.innerHTML||'';
+  const obsTitle   = document.getElementById('reportObserveTitle')?.textContent||'아이의 관찰 기록';
 
   const photoHTML = reportSelectedPhotos.map(u=>
     `<div style="aspect-ratio:1;border-radius:8px;overflow:hidden;"><img src="${u}" style="width:100%;height:100%;object-fit:cover;display:block;"></div>`
@@ -4046,68 +4045,54 @@ function printReport(){
   win.document.write(`<!DOCTYPE html><html><head>
 <meta charset="UTF-8"><title>성장 안내장</title>
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&display=swap');
+/* ── 앱 CSS 변수 주입 ── */
+:root{
+  --bg:#F6F1E7;--bg-2:#EFE7D6;--ink:#2F3A2E;--ink-soft:#5C6B57;
+  --accent:#3D7A4A;--accent-2:#6FB37C;--warm:#E07A3C;--sky:#7FB7CE;
+  --paper:#FFFDF7;--line:#D9CFB8;--green:#3D7A4A;--yellow:#E2B23B;
+  --orange:#E07A3C;--red:#C94A3F;
+  --shadow:0 6px 18px rgba(60,50,30,.08),0 2px 4px rgba(60,50,30,.06);
+  --radius:22px;
+}
+/* ── 인쇄 레이아웃 ── */
 *{box-sizing:border-box;margin:0;padding:0;}
 @page{size:A4 portrait;margin:0;}
 html,body{
-  font-family:'Malgun Gothic','맑은 고딕','Noto Sans KR',sans-serif;
-  width:210mm;height:297mm;
-  background:#fff;font-size:10px;overflow:hidden;
+  font-family:'Malgun Gothic','맑은 고딕',sans-serif;
+  width:210mm;height:297mm;background:#fff;
+  font-size:10px;overflow:hidden;
 }
 .wrap{
   height:297mm;display:flex;flex-direction:column;
   padding:5mm 7mm;gap:4px;
 }
-img{max-width:100%;display:block;}
-.header-img{width:100%;border-radius:4px;overflow:hidden;}
-.header-img img{width:100%;display:block;}
+.header-img img{width:100%;display:block;border-radius:4px;}
 .title{
-  text-align:center;
-  font-size:28px;font-weight:900;color:#3B6D11;
-  letter-spacing:-1px;line-height:1.15;
-  padding:4px 0 6px;white-space:nowrap;
-  border-bottom:1.5px solid #e0e0d8;
+  text-align:center;font-size:28px;font-weight:900;color:#3B6D11;
+  letter-spacing:-1px;line-height:1.15;white-space:nowrap;
+  padding:4px 0 6px;border-bottom:1.5px solid #e0e0d8;
 }
 .row{display:grid;grid-template-columns:1fr 1fr;gap:5px;}
 .row-top{flex:0 0 auto;}
 .row-bot{flex:1 1 0;min-height:0;}
-.box{
-  background:#f8f8f4;border-radius:8px;padding:7px 9px;
-  border:1px solid #e8e8e0;overflow:hidden;
-}
-.box-bot{
-  background:#f8f8f4;border-radius:8px;padding:8px 10px;
-  border:1px solid #e8e8e0;overflow:hidden;
-  display:flex;flex-direction:column;justify-content:center;
-}
+.box{background:#f8f8f4;border-radius:8px;padding:7px 9px;border:1px solid #e8e8e0;overflow:hidden;}
+.box-bot{background:#f8f8f4;border-radius:8px;padding:8px 10px;border:1px solid #e8e8e0;overflow:hidden;display:flex;flex-direction:column;justify-content:center;}
 .box-title{font-size:10px;color:#888;font-weight:700;margin-bottom:5px;}
-/* SVG 고정 */
-svg{display:block;width:100%;}
-/* 인성 막대 */
+svg{display:block;width:100%;height:auto;}
 svg[viewBox*="208"]{height:110px !important;}
-/* 레이더 */
 svg[viewBox*="-20"]{height:140px !important;}
-/* 4영역 컬러 박스 스타일 유지 */
-[style*="border-radius:7px"]{border-radius:7px;}
-/* 총평 */
 .comment-box{border:1px solid #e0e0d8;border-radius:8px;padding:7px 10px;flex:0 0 auto;}
 .comment-label{font-size:10px;color:#888;margin-bottom:3px;font-weight:700;}
 .comment-text{font-size:11px;line-height:1.75;color:#2F3A2E;white-space:pre-wrap;}
-/* 사진 */
 .photo-wrap{border-radius:8px;padding:6px 9px;border:1px solid #e8e8e0;background:#f8f8f4;flex:0 0 auto;}
 .photo-label{font-size:10.5px;color:#555;font-weight:700;margin-bottom:4px;}
 .photo-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;}
 .photo-grid div{aspect-ratio:1;border-radius:6px;overflow:hidden;}
 .photo-grid img{width:100%;height:100%;object-fit:cover;display:block;}
-/* 인성 해석 박스 */
-[style*="border-left:3px solid"]{border-left:3px solid #B39DDB !important;}
-/* 잔반 도넛 */
-.janban-row,.janban-inner{display:flex;align-items:center;gap:10px;}
 </style>
 <script>window.onload=function(){window.print();}<\/script>
 </head><body>
 <div class="wrap">
-
   <div class="header-img"><img src="${headerUrl}" onerror="this.style.display='none'"></div>
   <div class="title">2026학년도 남평행복프로젝트 온(溫)마음(音) 1학기 성장 안내장</div>
 
@@ -4138,11 +4123,10 @@ svg[viewBox*="-20"]{height:140px !important;}
     <div class="comment-text">${comment.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>
   </div>
 
-  ${photoHTML ? `<div class="photo-wrap">
+  ${photoHTML?`<div class="photo-wrap">
     <div class="photo-label">📸 온마음 활동에 이렇게 참여했어요</div>
     <div class="photo-grid">${photoHTML}</div>
-  </div>` : ''}
-
+  </div>`:''}
 </div>
 </body></html>`);
   win.document.close();
