@@ -3534,22 +3534,38 @@ async function selectReportStudent(id){
       <text x="${cx-r-12}" y="${cy+4}" text-anchor="end" font-size="10" fill="${catColors[3]}" font-weight="700">💚 인성 ${Math.round((catPts.nature+catPts.life+catPts.heart)/3)}점</text>
     </svg>`;
 
-  // TOP3 활동 계산
-  const actCount = {};
+  // 4영역별 TOP2 활동 계산
+  const catDefs = [
+    {key:'nature', label:'🌳 자연 탐구', color:'#7BC87E', bg:'#EAF5EB'},
+    {key:'life',   label:'🌱 생명 존중', color:'#74B8E0', bg:'#E8F4FB'},
+    {key:'heart',  label:'💛 마음 인성', color:'#F5A623', bg:'#FEF5E7'},
+    {key:'sound',  label:'🎵 소리 감수성', color:'#B39DDB', bg:'#F3EFFC'},
+  ];
+  const catActCount = {};
   sLogs.forEach(l=>{
-    if(!l.activity) return;
-    actCount[l.activity] = (actCount[l.activity]||0) + (l.points||0);
+    if(!l.activity||!l.category) return;
+    const k = `${l.category}__${l.activity}`;
+    catActCount[k] = (catActCount[k]||0) + (l.points||0);
   });
-  const top3 = Object.entries(actCount).sort((a,b)=>b[1]-a[1]).slice(0,3);
-  const medals = ['🥇','🥈','🥉'];
-  if(top3.length>0 && catEl){
-    catEl.innerHTML += `<div style="margin-top:6px;border-top:1px solid #e8e8e0;padding-top:6px">
-      <div style="font-size:10px;color:#888;margin-bottom:4px;font-weight:700">많이 참여한 활동 TOP 3</div>
-      ${top3.map((a,i)=>`<div style="display:flex;align-items:center;gap:4px;font-size:10px;margin-bottom:2px">
-        <span>${medals[i]}</span>
-        <span style="color:#2F3A2E;font-weight:600">${a[0]}</span>
-        <span style="color:#aaa;margin-left:auto">${a[1]}점</span>
-      </div>`).join('')}
+  if(catEl){
+    const areaBoxes = catDefs.map(cd=>{
+      const acts = Object.entries(catActCount)
+        .filter(([k])=>k.startsWith(cd.key+'__'))
+        .map(([k,v])=>([k.replace(cd.key+'__',''),v]))
+        .sort((a,b)=>b[1]-a[1]).slice(0,2);
+      const actHTML = acts.length>0
+        ? acts.map(a=>`<div style="display:flex;justify-content:space-between;font-size:9px;margin-bottom:1px">
+            <span style="color:#555;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:75%">${a[0]}</span>
+            <span style="color:${cd.color};font-weight:700;flex-shrink:0">${a[1]}점</span>
+          </div>`).join('')
+        : `<div style="font-size:9px;color:#ccc">기록 없음</div>`;
+      return `<div style="background:${cd.bg};border:1.5px solid ${cd.color};border-radius:7px;padding:5px 7px;flex:1">
+        <div style="font-size:9.5px;color:${cd.color};font-weight:800;margin-bottom:3px">${cd.label}</div>
+        ${actHTML}
+      </div>`;
+    });
+    catEl.innerHTML += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-top:6px">
+      ${areaBoxes.join('')}
     </div>`;
   }
 
@@ -4047,8 +4063,8 @@ html,body{
 .header-img img{width:100%;display:block;border-radius:4px;}
 .title{
   text-align:center;
-  font-size:30px;font-weight:900;color:#3B6D11;
-  letter-spacing:-1.5px;line-height:1.1;
+  font-size:28px;font-weight:900;color:#3B6D11;
+  letter-spacing:-1px;line-height:1.1;
   padding:4px 0 6px;
   border-bottom:1.5px solid #e0e0d8;
 }
@@ -4111,7 +4127,7 @@ svg{display:block;}
     <!-- 1번: 활동영역 + TOP3 하나의 박스 -->
     <div class="box">
       <div class="box-title">활동 영역별 참여</div>
-      <svg viewBox="-20 0 240 205" style="width:100%;height:170px;">${catSVG.replace(/^<svg[^>]*>/,'').replace(/<\/svg>$/,'')}</svg>
+      <svg viewBox="-20 0 240 205" style="width:100%;height:140px;">${catSVG.replace(/^<svg[^>]*>/,'').replace(/<\/svg>$/,'')}</svg>
       ${catExtra}
     </div>
 
