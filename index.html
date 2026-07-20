@@ -3536,10 +3536,10 @@ async function selectReportStudent(id){
 
   // 4영역별 TOP2 활동 계산
   const catDefs = [
-    {key:'nature', label:'🌳 자연 탐구', color:'#7BC87E', bg:'#EAF5EB'},
-    {key:'life',   label:'🌱 생명 존중', color:'#74B8E0', bg:'#E8F4FB'},
-    {key:'heart',  label:'💛 마음 인성', color:'#F5A623', bg:'#FEF5E7'},
-    {key:'sound',  label:'🎵 소리 감수성', color:'#B39DDB', bg:'#F3EFFC'},
+    {key:'nature', label:'🌳 자연 탐구', color:'#7BC87E', bg:'#EAF5EB', top:2},
+    {key:'life',   label:'🌱 생명 존중', color:'#74B8E0', bg:'#E8F4FB', top:2},
+    {key:'heart',  label:'💛 마음 인성', color:'#F5A623', bg:'#FEF5E7', top:1},
+    {key:'sound',  label:'🎵 소리 감수성', color:'#B39DDB', bg:'#F3EFFC', top:1},
   ];
   const catActCount = {};
   sLogs.forEach(l=>{
@@ -3552,7 +3552,7 @@ async function selectReportStudent(id){
       const acts = Object.entries(catActCount)
         .filter(([k])=>k.startsWith(cd.key+'__'))
         .map(([k,v])=>([k.replace(cd.key+'__',''),v]))
-        .sort((a,b)=>b[1]-a[1]).slice(0,2);
+        .sort((a,b)=>b[1]-a[1]).slice(0,cd.top);
       const actHTML = acts.length>0
         ? acts.map(a=>`<div style="display:flex;justify-content:space-between;font-size:9px;margin-bottom:1px">
             <span style="color:#555;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:75%">${a[0]}</span>
@@ -4031,8 +4031,8 @@ function printReport(){
   const obsTitle= document.getElementById('reportObserveTitle')?.textContent||'아이의 관찰 기록';
 
   // SVG outerHTML 직접 복사 (현재 화면 그대로)
-  const catSVG   = catEl?.querySelector('svg')?.outerHTML||'';
-  const catExtra = catEl?.querySelector('div[style*="border-top"]')?.outerHTML||''; // TOP3
+  const catSVG      = catEl?.querySelector('svg')?.outerHTML||'';
+  const catAreaGrid = catEl?.querySelector('div[style*="grid-template-columns:1fr 1fr"]')?.outerHTML||'';
   const kediSVG  = kediEl?.innerHTML||'';
   const janbanInner = janbanEl?.innerHTML||'';
   const obsInner = obsEl?.innerHTML||'';
@@ -4071,6 +4071,9 @@ html,body{
 .row{display:grid;grid-template-columns:1fr 1fr;gap:5px;}
 /* 상단 두 칸: 고정 높이 */
 .row-top{flex:0 0 auto;}
+/* 인성 막대 SVG 높이 고정 — 여백 없애기 */
+.row-top .box svg{height:auto !important;}
+.row-top .box svg[viewBox*="208"]{height:110px !important;}
 /* 하단 두 칸: 남은 공간 */
 .row-bot{flex:1 1 0;min-height:0;}
 .box{
@@ -4128,7 +4131,7 @@ svg{display:block;}
     <div class="box">
       <div class="box-title">활동 영역별 참여</div>
       <svg viewBox="-20 0 240 205" style="width:100%;height:140px;">${catSVG.replace(/^<svg[^>]*>/,'').replace(/<\/svg>$/,'')}</svg>
-      ${catExtra}
+      ${catAreaGrid}
     </div>
 
     <!-- 2번: 인성검사 -->
