@@ -1948,13 +1948,13 @@ function triggerPWAInstall(){
     <!-- AI 종합 총평 패널 -->
     <div style="margin-top:20px;background:#f8f8f4;border-radius:16px;padding:20px 24px;border:1.5px solid var(--line)">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-        <h3 style="margin:0;font-size:17px">🤖 AI 종합 총평</h3>
+        <h3 style="margin:0;font-size:17px">📝 종합 총평</h3>
         <div style="display:flex;gap:8px">
           <button onclick="generateStatsComment()" style="background:var(--accent);color:#fff;border:none;border-radius:999px;padding:7px 16px;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer">🔄 생성</button>
           <button onclick="openReportModal('all-pdf')" style="background:linear-gradient(135deg,#3D7A4A,#6FB37C);color:#fff;border:none;border-radius:999px;padding:7px 16px;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer">📊 전체 리포트 PDF</button>
         </div>
       </div>
-      <div id="statsCommentArea" style="font-size:13px;line-height:1.8;color:var(--ink);background:#fff;border-radius:10px;padding:14px;border:1px solid var(--line);min-height:80px;white-space:pre-wrap">버튼을 눌러 AI 총평을 생성하세요 🌿</div>
+      <div id="statsCommentArea" style="font-size:13px;line-height:1.8;color:var(--ink);background:#fff;border-radius:10px;padding:14px;border:1px solid var(--line);min-height:80px;white-space:pre-wrap">버튼을 눌러 종합 총평을 생성하세요 🌿</div>
     </div>
   </div>
 </main>
@@ -2313,13 +2313,13 @@ function triggerPWAInstall(){
       <!-- AI 종합 총평 패널 (교사분석) -->
       <div class="tpanel" style="grid-column:1 / -1">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-          <h3 style="margin:0">🤖 AI 종합 총평</h3>
+          <h3 style="margin:0">📝 종합 총평</h3>
           <div style="display:flex;gap:8px">
             <button onclick="generateTeacherAllComment()" style="background:var(--accent);color:#fff;border:none;border-radius:999px;padding:7px 16px;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer">🔄 생성</button>
             <button onclick="openReportModal('all-pdf')" style="background:linear-gradient(135deg,#3D7A4A,#6FB37C);color:#fff;border:none;border-radius:999px;padding:7px 16px;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer">📊 전체 리포트 PDF</button>
           </div>
         </div>
-        <div id="teacherAllCommentArea" style="font-size:13px;line-height:1.8;color:var(--ink);background:#fff;border-radius:10px;padding:14px;border:1px solid var(--line);min-height:80px;white-space:pre-wrap">버튼을 눌러 AI 총평을 생성하세요 🌿</div>
+        <div id="teacherAllCommentArea" style="font-size:13px;line-height:1.8;color:var(--ink);background:#fff;border-radius:10px;padding:14px;border:1px solid var(--line);min-height:80px;white-space:pre-wrap">버튼을 눌러 종합 총평을 생성하세요 🌿</div>
       </div>
     </div>
   </div>
@@ -4051,38 +4051,27 @@ function printReport(){
   const janbanHTML = document.getElementById('reportJanban')?.innerHTML||'';
   const obsHTML    = document.getElementById('reportObserve')?.innerHTML||'';
   const obsTitle   = document.getElementById('reportObserveTitle')?.textContent||'아이의 관찰 기록';
-
-  const photoHTML = reportSelectedPhotos.map(u=>
+  const photoHTML  = reportSelectedPhotos.map(u=>
     `<div style="aspect-ratio:1;border-radius:8px;overflow:hidden;"><img src="${u}" style="width:100%;height:100%;object-fit:cover;display:block;"></div>`
   ).join('');
 
   const headerUrl = 'https://res.cloudinary.com/dukzrwvx6/image/upload/f_auto,q_auto/%EC%A7%80%EA%B5%AC_%EC%98%A8_On_%EB%8F%84_%EB%82%AE%EC%B6%94%EB%8A%94_%EC%98%A8_%E6%BA%AB_%EB%A7%88%EC%9D%8C_qwmzrr.png';
-
   const safeComment = comment.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 
   const html = `<!DOCTYPE html><html><head>
 <meta charset="UTF-8"><title>성장 안내장</title>
 <style>
 :root{
-  --bg:#F6F1E7;--bg-2:#EFE7D6;--ink:#2F3A2E;--ink-soft:#5C6B57;
-  --accent:#3D7A4A;--accent-2:#6FB37C;--warm:#E07A3C;--sky:#7FB7CE;
-  --paper:#FFFDF7;--line:#D9CFB8;--green:#3D7A4A;--yellow:#E2B23B;
-  --orange:#E07A3C;--red:#C94A3F;
+  --bg:#F6F1E7;--ink:#2F3A2E;--ink-soft:#5C6B57;
+  --accent:#3D7A4A;--accent-2:#6FB37C;--warm:#E07A3C;
+  --line:#D9CFB8;--green:#3D7A4A;
 }
 *{box-sizing:border-box;margin:0;padding:0;}
 @page{size:A4 portrait;margin:0;}
-html,body{
-  font-family:'Malgun Gothic','맑은 고딕',sans-serif;
-  width:210mm;height:297mm;background:#fff;
-  font-size:10px;overflow:hidden;
-}
+html,body{font-family:'Malgun Gothic','맑은 고딕',sans-serif;width:210mm;height:297mm;background:#fff;font-size:10px;overflow:hidden;}
 .wrap{height:297mm;display:flex;flex-direction:column;padding:5mm 7mm;gap:4px;}
 .header-img img{width:100%;display:block;border-radius:4px;}
-.title{
-  text-align:center;font-size:28px;font-weight:900;color:#3B6D11;
-  letter-spacing:-1px;line-height:1.15;white-space:nowrap;
-  padding:4px 0 6px;border-bottom:1.5px solid #e0e0d8;
-}
+.title{text-align:center;font-size:28px;font-weight:900;color:#3B6D11;letter-spacing:-1px;line-height:1.15;white-space:nowrap;padding:4px 0 6px;border-bottom:1.5px solid #e0e0d8;}
 .row{display:grid;grid-template-columns:1fr 1fr;gap:5px;}
 .row-top{flex:0 0 auto;}
 .row-bot{flex:1 1 0;min-height:0;}
@@ -4100,8 +4089,9 @@ svg[viewBox*="-20"]{height:140px !important;}
 .photo-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;}
 .photo-grid div{aspect-ratio:1;border-radius:6px;overflow:hidden;}
 .photo-grid img{width:100%;height:100%;object-fit:cover;display:block;}
+@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact;}}
 </style>
-</head><body>
+</head><body onload="window.print()">
 <div class="wrap">
   <div class="header-img"><img src="${headerUrl}" onerror="this.style.display='none'"></div>
   <div class="title">2026학년도 남평행복프로젝트 온(溫)마음(音) 1학기 성장 안내장</div>
@@ -4119,17 +4109,13 @@ svg[viewBox*="-20"]{height:140px !important;}
   </div>
   ${photoHTML?`<div class="photo-wrap"><div class="photo-label">📸 온마음 활동에 이렇게 참여했어요</div><div class="photo-grid">${photoHTML}</div></div>`:''}
 </div>
-<script>
-// 외부에서 win.print() 호출하므로 내부 자동실행 불필요
-<\/script>
 </body></html>`;
 
-  const win = window.open('', '_blank');
-  win.document.open();
-  win.document.write(html);
-  win.document.close();
-  // 새 창에서 직접 print 호출 (이미지 로드 대기)
-  setTimeout(()=>{ try{ win.focus(); win.print(); } catch(e){} }, 2000);
+  // Blob URL 방식 — 가장 안정적
+  const blob = new Blob([html], {type:'text/html;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const win = window.open(url, '_blank');
+  setTimeout(()=>URL.revokeObjectURL(url), 10000);
 }
 
 function resetReport(){
@@ -5083,19 +5069,17 @@ ${jStudent.map((s,i)=>{
 }).join('')}
 </tbody></table>`}
 
-<h2>🤖 AI 종합 총평</h2>
+<h2>📝 종합 총평</h2>
 <div id="allReportComment" style="background:#f8f8f4;border-radius:10px;padding:16px;border-left:4px solid #3D7A4A;line-height:1.8;font-size:13px;color:#2F3A2E;white-space:pre-wrap;">생성 중이에요...</div>
 
 <div class="footer">남평 온(溫)마음(音) 정원 Self-Log · 남평초등학교·병설유치원 · ${ds} 출력</div>
 </body></html>`;
 
-  const win=window.open('','_blank','width=900,height=700');
-  win.document.write(html); win.document.close();
-
-  // AI 총평 생성 후 인쇄
+  // 종합 총평 먼저 생성 후 Blob URL로 열기
   (async()=>{
     const topStudents = sPts.slice(0,3).map(s=>`${s.id}(${s.pts}점)`).join(', ');
     const topActNames = actTop.slice(0,3).map(([t,c])=>`${t}(${c}회)`).join(', ');
+    let commentTxt = `이번 1학기 동안 ${sPts.length}명의 학생들이 남평행복프로젝트에 성실히 참여하며 자연, 생명, 인성 영역에서 고르게 성장하였습니다. 활동 ${allLogs.filter(l=>l.type==='activity').length}건을 기록하였으며, 잔반 평균 ${jAvg}g을 달성하며 올바른 식습관도 함께 길렀습니다. 앞으로도 환경과 인성이 함께 성장하는 학급 문화가 이어지길 기대합니다.`;
     try {
       const resp = await fetch('https://api.anthropic.com/v1/messages',{
         method:'POST', headers:{'Content-Type':'application/json'},
@@ -5106,10 +5090,14 @@ ${jStudent.map((s,i)=>{
       });
       const data = await resp.json();
       const txt = data.content?.[0]?.text||'';
-      const el = win.document.getElementById('allReportComment');
-      if(el && txt) el.textContent = txt;
+      if(txt) commentTxt = txt;
     } catch(e){}
-    setTimeout(()=>{ try{ win.focus(); win.print(); } catch(e){} }, 800);
+    // 총평 삽입 후 Blob URL로 열기
+    const finalHtml = html.replace('생성 중이에요...', commentTxt.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'));
+    const blob = new Blob([finalHtml], {type:'text/html;charset=utf-8'});
+    const url = URL.createObjectURL(blob);
+    window.open(url, '_blank');
+    setTimeout(()=>URL.revokeObjectURL(url), 30000);
   })();
 }
 
