@@ -927,6 +927,17 @@ function triggerPWAInstall(){
     box-shadow:0 4px 14px rgba(56,142,60,.35);
     transition:all .15s ease;
   }
+  @media print {
+    body > *:not(#printArea) { display: none !important; }
+    #printArea {
+      display: block !important;
+      position: fixed; top: 0; left: 0;
+      width: 210mm; min-height: 297mm;
+      background: #fff;
+      font-family: 'Malgun Gothic', '맑은 고딕', sans-serif;
+    }
+    @page { size: A4 portrait; margin: 0; }
+  }
   .already-ok:hover{transform:translateY(-1px);box-shadow:0 6px 18px rgba(56,142,60,.45)}
   @media print {
     .nav-btns, header, .back, button:not(.print-keep) { display:none !important; }
@@ -936,6 +947,8 @@ function triggerPWAInstall(){
 </style>
 </head>
 <body>
+<!-- 성장 안내장 인쇄 전용 영역 -->
+<div id="printArea" style="display:none"></div>
 
 <header class="topbar">
   <div class="brand" onclick="goto('main')">
@@ -1079,6 +1092,11 @@ function triggerPWAInstall(){
         border-radius:12px;padding:11px 18px;font-family:inherit;font-size:13px;
         font-weight:800;cursor:pointer;box-shadow:0 3px 10px rgba(63,138,166,.3)
       ">📥 전체 데이터 CSV</button>
+      <button onclick="openReportModal('all-pdf')" style="
+        background:linear-gradient(135deg,#3D7A4A,#6FB37C);color:#fff;border:none;
+        border-radius:12px;padding:11px 18px;font-family:inherit;font-size:13px;
+        font-weight:800;cursor:pointer;box-shadow:0 3px 10px rgba(61,122,74,.3)
+      ">📊 전체 리포트 PDF</button>
       <button onclick="openReportModal('month-pdf')" style="
         background:linear-gradient(135deg,#3D7A4A,#6FB37C);color:#fff;border:none;
         border-radius:12px;padding:11px 18px;font-family:inherit;font-size:13px;
@@ -4054,68 +4072,49 @@ function printReport(){
   const photoHTML  = reportSelectedPhotos.map(u=>
     `<div style="aspect-ratio:1;border-radius:8px;overflow:hidden;"><img src="${u}" style="width:100%;height:100%;object-fit:cover;display:block;"></div>`
   ).join('');
-
   const headerUrl = 'https://res.cloudinary.com/dukzrwvx6/image/upload/f_auto,q_auto/%EC%A7%80%EA%B5%AC_%EC%98%A8_On_%EB%8F%84_%EB%82%AE%EC%B6%94%EB%8A%94_%EC%98%A8_%E6%BA%AB_%EB%A7%88%EC%9D%8C_qwmzrr.png';
   const safeComment = comment.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 
-  const html = `<!DOCTYPE html><html><head>
-<meta charset="UTF-8"><title>성장 안내장</title>
-<style>
-:root{
-  --bg:#F6F1E7;--ink:#2F3A2E;--ink-soft:#5C6B57;
-  --accent:#3D7A4A;--accent-2:#6FB37C;--warm:#E07A3C;
-  --line:#D9CFB8;--green:#3D7A4A;
-}
-*{box-sizing:border-box;margin:0;padding:0;}
-@page{size:A4 portrait;margin:0;}
-html,body{font-family:'Malgun Gothic','맑은 고딕',sans-serif;width:210mm;height:297mm;background:#fff;font-size:10px;overflow:hidden;}
-.wrap{height:297mm;display:flex;flex-direction:column;padding:5mm 7mm;gap:4px;}
-.header-img img{width:100%;display:block;border-radius:4px;}
-.title{text-align:center;font-size:28px;font-weight:900;color:#3B6D11;letter-spacing:-1px;line-height:1.15;white-space:nowrap;padding:4px 0 6px;border-bottom:1.5px solid #e0e0d8;}
-.row{display:grid;grid-template-columns:1fr 1fr;gap:5px;}
-.row-top{flex:0 0 auto;}
-.row-bot{flex:1 1 0;min-height:0;}
-.box{background:#f8f8f4;border-radius:8px;padding:7px 9px;border:1px solid #e8e8e0;overflow:hidden;}
-.box-bot{background:#f8f8f4;border-radius:8px;padding:8px 10px;border:1px solid #e8e8e0;overflow:hidden;display:flex;flex-direction:column;justify-content:center;}
-.box-title{font-size:10px;color:#888;font-weight:700;margin-bottom:5px;}
-svg{display:block;width:100%;height:auto;}
-svg[viewBox*="208"]{height:110px !important;}
-svg[viewBox*="-20"]{height:140px !important;}
-.comment-box{border:1px solid #e0e0d8;border-radius:8px;padding:7px 10px;flex:0 0 auto;}
-.comment-label{font-size:10px;color:#888;margin-bottom:3px;font-weight:700;}
-.comment-text{font-size:11px;line-height:1.75;color:#2F3A2E;white-space:pre-wrap;}
-.photo-wrap{border-radius:8px;padding:6px 9px;border:1px solid #e8e8e0;background:#f8f8f4;flex:0 0 auto;}
-.photo-label{font-size:10.5px;color:#555;font-weight:700;margin-bottom:4px;}
-.photo-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;}
-.photo-grid div{aspect-ratio:1;border-radius:6px;overflow:hidden;}
-.photo-grid img{width:100%;height:100%;object-fit:cover;display:block;}
-@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact;}}
-</style>
-</head><body onload="window.print()">
-<div class="wrap">
-  <div class="header-img"><img src="${headerUrl}" onerror="this.style.display='none'"></div>
-  <div class="title">2026학년도 남평행복프로젝트 온(溫)마음(音) 1학기 성장 안내장</div>
-  <div class="row row-top">
-    <div class="box"><div class="box-title">활동 영역별 참여</div>${catHTML}</div>
-    <div class="box"><div class="box-title">인성검사 성장</div>${kediHTML}</div>
-  </div>
-  <div class="row row-bot">
-    <div class="box-bot"><div class="box-title">🥣 냠냠튼튼 초록 빈그릇 급식 잔반 기록</div>${janbanHTML}</div>
-    <div class="box-bot"><div class="box-title">✏️ ${obsTitle}</div>${obsHTML}</div>
-  </div>
-  <div class="comment-box">
-    <div class="comment-label">남평행복프로젝트 활동을 통해서...</div>
-    <div class="comment-text">${safeComment}</div>
-  </div>
-  ${photoHTML?`<div class="photo-wrap"><div class="photo-label">📸 온마음 활동에 이렇게 참여했어요</div><div class="photo-grid">${photoHTML}</div></div>`:''}
-</div>
-</body></html>`;
+  const printArea = document.getElementById('printArea');
+  printArea.innerHTML = `
+    <div style="height:297mm;display:flex;flex-direction:column;padding:5mm 7mm;gap:4px;box-sizing:border-box;">
+      <img src="${headerUrl}" style="width:100%;display:block;border-radius:4px;" onerror="this.style.display='none'">
+      <div style="text-align:center;font-size:28px;font-weight:900;color:#3B6D11;letter-spacing:-1px;line-height:1.15;white-space:nowrap;padding:4px 0 6px;border-bottom:1.5px solid #e0e0d8;">
+        2026학년도 남평행복프로젝트 온(溫)마음(音) 1학기 성장 안내장
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;flex:0 0 auto;">
+        <div style="background:#f8f8f4;border-radius:8px;padding:7px 9px;border:1px solid #e8e8e0;overflow:hidden;">
+          <div style="font-size:10px;color:#888;font-weight:700;margin-bottom:5px;">활동 영역별 참여</div>
+          ${catHTML}
+        </div>
+        <div style="background:#f8f8f4;border-radius:8px;padding:7px 9px;border:1px solid #e8e8e0;overflow:hidden;">
+          <div style="font-size:10px;color:#888;font-weight:700;margin-bottom:5px;">인성검사 성장</div>
+          ${kediHTML}
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;flex:1 1 0;min-height:0;">
+        <div style="background:#f8f8f4;border-radius:8px;padding:8px 10px;border:1px solid #e8e8e0;overflow:hidden;display:flex;flex-direction:column;justify-content:center;">
+          <div style="font-size:10px;color:#888;font-weight:700;margin-bottom:5px;">🥣 냠냠튼튼 초록 빈그릇 급식 잔반 기록</div>
+          ${janbanHTML}
+        </div>
+        <div style="background:#f8f8f4;border-radius:8px;padding:8px 10px;border:1px solid #e8e8e0;overflow:hidden;display:flex;flex-direction:column;justify-content:center;">
+          <div style="font-size:10px;color:#888;font-weight:700;margin-bottom:5px;">✏️ ${obsTitle}</div>
+          ${obsHTML}
+        </div>
+      </div>
+      <div style="border:1px solid #e0e0d8;border-radius:8px;padding:7px 10px;flex:0 0 auto;">
+        <div style="font-size:10px;color:#888;margin-bottom:3px;font-weight:700;">남평행복프로젝트 활동을 통해서...</div>
+        <div style="font-size:11px;line-height:1.75;color:#2F3A2E;white-space:pre-wrap;">${safeComment}</div>
+      </div>
+      ${photoHTML?`<div style="border-radius:8px;padding:6px 9px;border:1px solid #e8e8e0;background:#f8f8f4;flex:0 0 auto;">
+        <div style="font-size:10.5px;color:#555;font-weight:700;margin-bottom:4px;">📸 온마음 활동에 이렇게 참여했어요</div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:5px;">${photoHTML}</div>
+      </div>`:''}
+    </div>`;
 
-  // Blob URL 방식 — 가장 안정적
-  const blob = new Blob([html], {type:'text/html;charset=utf-8'});
-  const url = URL.createObjectURL(blob);
-  const win = window.open(url, '_blank');
-  setTimeout(()=>URL.revokeObjectURL(url), 10000);
+  // 인쇄 후 원래대로 복구
+  window.print();
+  setTimeout(()=>{ printArea.innerHTML=''; }, 1000);
 }
 
 function resetReport(){
@@ -9345,26 +9344,33 @@ async function generateTeacherAllComment(){
   await _generateAllComment(el);
 }
 async function _generateAllComment(el){
-  const total = allLogs.filter(l=>l.type==='activity').length;
-  const sPts2 = students.map(s=>({id:s.id,pts:allLogs.filter(l=>l.studentId===s.id&&l.type==='activity').reduce((a,b)=>a+(b.points||0),0)})).sort((a,b)=>b.pts-a.pts);
+  const actLogs = allLogs.filter(l=>l.type==='activity');
+  const total = actLogs.length;
+  const sPts2 = students.map(s=>({id:s.id,pts:actLogs.filter(l=>l.studentId===s.id).reduce((a,b)=>a+(b.points||0),0)})).sort((a,b)=>b.pts-a.pts);
   const topS = sPts2.slice(0,3).map(s=>`${s.id}(${s.pts}점)`).join(', ');
+  const cats={nature:0,life:0,heart:0,sound:0};
+  actLogs.forEach(l=>{if(cats[l.category]!==undefined)cats[l.category]+=(l.points||0);});
+  const catTotal=Object.values(cats).reduce((a,b)=>a+b,1);
+  const catStr=`자연탐구 ${Math.round(cats.nature/catTotal*100)}%, 생명존중 ${Math.round(cats.life/catTotal*100)}%, 마음인성 ${Math.round(cats.heart/catTotal*100)}%, 소리감수성 ${Math.round(cats.sound/catTotal*100)}%`;
   const actCount2={};
-  allLogs.filter(l=>l.type==='activity').forEach(l=>{ actCount2[l.activity]=(actCount2[l.activity]||0)+1; });
+  actLogs.forEach(l=>{actCount2[l.activity]=(actCount2[l.activity]||0)+1;});
   const topA = Object.entries(actCount2).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([t,c])=>`${t}(${c}회)`).join(', ');
   const jAvg2 = janbanLogs.length ? Math.round(janbanLogs.reduce((a,b)=>a+(b.weight||0),0)/janbanLogs.length) : 0;
+  const obsSamples = observationLogs.slice(-3).map(o=>o.discover||o.text||'').filter(Boolean).slice(0,2).join(' / ');
+  const teacherSamples = teacherObsLogs.slice(-2).map(o=>o.content||'').filter(Boolean).join(' / ');
   try {
     const resp = await fetch('https://api.anthropic.com/v1/messages',{
       method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({model:'claude-sonnet-4-6', max_tokens:500,
-        messages:[{role:'user',content:`남평행복프로젝트 온(溫)마음(音) 1학기 전체 데이터를 분석해 교사를 위한 종합 총평 3~4문장을 작성해주세요.\n데이터: 총 ${sPts2.length}명, 활동 ${total}건, 잔반 평균 ${jAvg2}g\n상위학생: ${topS}\n인기활동: ${topA}\n조건: 학급 전체 성장과 특징 따뜻하게 분석, 교육적 의미 포함, "AI" 표현 금지`}]
+      body: JSON.stringify({model:'claude-sonnet-4-6', max_tokens:700,
+        messages:[{role:'user',content:`남평행복프로젝트 온(溫)마음(音) 1학기 전체 데이터를 분석해 교사를 위한 종합 총평 4~5문장을 작성해주세요.\n\n[데이터]\n- 총 ${sPts2.length}명, 활동 ${total}건, 잔반 평균 ${jAvg2}g\n- 영역별 참여 비율: ${catStr}\n- 인기 활동 TOP3: ${topA}\n- 상위 학생: ${topS}\n- 아이 관찰기록 예시: "${obsSamples}"\n- 교사 관찰기록: "${teacherSamples}"\n\n[조건] 각 영역 비율 언급, 어떤 활동에서 어떤 인성이 길러졌는지, 관찰기록의 성장 특징, "AI" 표현 금지, 따뜻한 분석 문체`}]
       })
     });
     const data = await resp.json();
     const txt = data.content?.[0]?.text||'';
     if(el && txt) el.textContent = txt;
-    else if(el) el.textContent = `이번 1학기 동안 ${sPts2.length}명의 학생들이 남평행복프로젝트에 성실히 참여하며 자연, 생명, 인성 영역에서 고르게 성장하였습니다. 잔반 평균 ${jAvg2}g을 달성하며 올바른 식습관도 함께 기르고 있습니다.`;
+    else if(el) el.textContent = `이번 1학기 동안 ${sPts2.length}명의 학생들이 남평행복프로젝트에 성실히 참여하였으며, 영역별로는 ${catStr} 순으로 활동이 이루어졌습니다. 잔반 평균 ${jAvg2}g을 달성하며 올바른 식습관도 함께 기르고 있습니다.`;
   } catch(e){
-    if(el) el.textContent = `이번 1학기 동안 ${sPts2.length}명의 학생들이 남평행복프로젝트에 성실히 참여하며 자연, 생명, 인성 영역에서 고르게 성장하였습니다. 특히 ${topA.split(',')[0]} 활동에서 높은 참여도를 보였으며, 잔반 줄이기 활동에서도 평균 ${jAvg2}g의 성과를 달성하였습니다.`;
+    if(el) el.textContent = `이번 1학기 동안 ${sPts2.length}명의 학생들이 남평행복프로젝트에 성실히 참여하였으며, 영역별로는 ${catStr}의 비율로 활동이 이루어졌습니다. 잔반 평균 ${jAvg2}g을 달성하며 올바른 식습관도 함께 기르고 있습니다.`;
   }
 }
 
