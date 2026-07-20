@@ -4023,22 +4023,21 @@ function printReport(){
   const s = students.find(x=>x.id===reportStudent);
   if(!s) return;
 
-  // 대시보드에서 현재 렌더된 SVG를 직접 가져오기
-  const catEl   = document.getElementById('reportCatBars');
-  const kediEl  = document.getElementById('reportKediBars');
-  const janbanEl= document.getElementById('reportJanban');
-  const obsEl   = document.getElementById('reportObserve');
-  const obsTitle= document.getElementById('reportObserveTitle')?.textContent||'아이의 관찰 기록';
+  // 대시보드에서 각 섹션의 outerHTML을 인라인 스타일까지 포함해서 가져오기
+  const catEl    = document.getElementById('reportCatBars');
+  const kediEl   = document.getElementById('reportKediBars');
+  const janbanEl = document.getElementById('reportJanban');
+  const obsEl    = document.getElementById('reportObserve');
+  const obsTitle = document.getElementById('reportObserveTitle')?.textContent||'아이의 관찰 기록';
 
-  // SVG outerHTML 직접 복사 (현재 화면 그대로)
-  const catSVG      = catEl?.querySelector('svg')?.outerHTML||'';
-  const catAreaGrid = catEl?.querySelector('div[style*="grid-template-columns:1fr 1fr"]')?.outerHTML||'';
-  const kediSVG  = kediEl?.innerHTML||'';
-  const janbanInner = janbanEl?.innerHTML||'';
-  const obsInner = obsEl?.innerHTML||'';
+  // 각 섹션 innerHTML 그대로 복사
+  const catHTML    = catEl?.innerHTML||'';
+  const kediHTML   = kediEl?.innerHTML||'';
+  const janbanHTML = janbanEl?.innerHTML||'';
+  const obsHTML    = obsEl?.innerHTML||'';
 
   const photoHTML = reportSelectedPhotos.map(u=>
-    `<div><img src="${u}"></div>`
+    `<div style="aspect-ratio:1;border-radius:8px;overflow:hidden;"><img src="${u}" style="width:100%;height:100%;object-fit:cover;display:block;"></div>`
   ).join('');
 
   const headerUrl = 'https://res.cloudinary.com/dukzrwvx6/image/upload/f_auto,q_auto/%EC%A7%80%EA%B5%AC_%EC%98%A8_On_%EB%8F%84_%EB%82%AE%EC%B6%94%EB%8A%94_%EC%98%A8_%E6%BA%AB_%EB%A7%88%EC%9D%8C_qwmzrr.png';
@@ -4047,75 +4046,63 @@ function printReport(){
   win.document.write(`<!DOCTYPE html><html><head>
 <meta charset="UTF-8"><title>성장 안내장</title>
 <style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&display=swap');
 *{box-sizing:border-box;margin:0;padding:0;}
 @page{size:A4 portrait;margin:0;}
 html,body{
-  font-family:'Malgun Gothic','맑은 고딕',sans-serif;
+  font-family:'Malgun Gothic','맑은 고딕','Noto Sans KR',sans-serif;
   width:210mm;height:297mm;
   background:#fff;font-size:10px;overflow:hidden;
 }
 .wrap{
-  height:297mm;
-  display:flex;flex-direction:column;
-  padding:5mm 7mm;
-  gap:4px;
+  height:297mm;display:flex;flex-direction:column;
+  padding:5mm 7mm;gap:4px;
 }
-.header-img img{width:100%;display:block;border-radius:4px;}
+img{max-width:100%;display:block;}
+.header-img{width:100%;border-radius:4px;overflow:hidden;}
+.header-img img{width:100%;display:block;}
 .title{
   text-align:center;
   font-size:28px;font-weight:900;color:#3B6D11;
-  letter-spacing:-1px;line-height:1.1;
-  padding:4px 0 6px;
+  letter-spacing:-1px;line-height:1.15;
+  padding:4px 0 6px;white-space:nowrap;
   border-bottom:1.5px solid #e0e0d8;
 }
 .row{display:grid;grid-template-columns:1fr 1fr;gap:5px;}
-/* 상단 두 칸: 고정 높이 */
 .row-top{flex:0 0 auto;}
-/* 인성 막대 SVG 높이 고정 — 여백 없애기 */
-.row-top .box svg{height:auto !important;}
-.row-top .box svg[viewBox*="208"]{height:110px !important;}
-/* 하단 두 칸: 남은 공간 */
 .row-bot{flex:1 1 0;min-height:0;}
 .box{
-  background:#f8f8f4;border-radius:8px;
-  padding:7px 9px;border:1px solid #e8e8e0;
-  overflow:hidden;
+  background:#f8f8f4;border-radius:8px;padding:7px 9px;
+  border:1px solid #e8e8e0;overflow:hidden;
 }
 .box-bot{
-  background:#f8f8f4;border-radius:8px;
-  padding:8px 10px;border:1px solid #e8e8e0;
-  overflow:hidden;
-  display:flex;flex-direction:column;
-  justify-content:center;
+  background:#f8f8f4;border-radius:8px;padding:8px 10px;
+  border:1px solid #e8e8e0;overflow:hidden;
+  display:flex;flex-direction:column;justify-content:center;
 }
-.box-title{font-size:10px;color:#888;font-weight:700;margin-bottom:4px;}
-/* SVG 고정 크기 — 대시보드와 동일하게 */
-svg{display:block;}
-/* TOP3 스타일 */
-.top3{margin-top:5px;padding-top:5px;border-top:1px solid #e8e8e0;}
-.top3-title{font-size:9.5px;color:#888;font-weight:700;margin-bottom:3px;}
-.top3-item{display:flex;align-items:center;gap:4px;font-size:9.5px;margin-bottom:2px;color:#2F3A2E;}
-.top3-score{margin-left:auto;color:#aaa;}
-/* 인성 해석 */
-.kedi-comment{margin-top:6px;padding:5px 7px;background:#f0eef8;border-radius:6px;border-left:3px solid #B39DDB;font-size:9px;color:#555;line-height:1.6;}
-/* 잔반 */
-.janban-row{display:flex;align-items:center;gap:8px;height:100%;}
-.janban-legend{flex:1;display:flex;flex-direction:column;gap:4px;}
-.legend-item{display:flex;align-items:center;gap:5px;font-size:10px;}
-.legend-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
-/* 관찰기록 */
-.obs-item{font-size:11px;color:#2F3A2E;line-height:1.7;padding:4px 0;}
-.obs-divider{height:0.5px;background:#e8e8e0;}
+.box-title{font-size:10px;color:#888;font-weight:700;margin-bottom:5px;}
+/* SVG 고정 */
+svg{display:block;width:100%;}
+/* 인성 막대 */
+svg[viewBox*="208"]{height:110px !important;}
+/* 레이더 */
+svg[viewBox*="-20"]{height:140px !important;}
+/* 4영역 컬러 박스 스타일 유지 */
+[style*="border-radius:7px"]{border-radius:7px;}
 /* 총평 */
 .comment-box{border:1px solid #e0e0d8;border-radius:8px;padding:7px 10px;flex:0 0 auto;}
 .comment-label{font-size:10px;color:#888;margin-bottom:3px;font-weight:700;}
 .comment-text{font-size:11px;line-height:1.75;color:#2F3A2E;white-space:pre-wrap;}
 /* 사진 */
 .photo-wrap{border-radius:8px;padding:6px 9px;border:1px solid #e8e8e0;background:#f8f8f4;flex:0 0 auto;}
-.photo-label{font-size:10px;color:#555;font-weight:700;margin-bottom:4px;}
+.photo-label{font-size:10.5px;color:#555;font-weight:700;margin-bottom:4px;}
 .photo-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;}
 .photo-grid div{aspect-ratio:1;border-radius:6px;overflow:hidden;}
 .photo-grid img{width:100%;height:100%;object-fit:cover;display:block;}
+/* 인성 해석 박스 */
+[style*="border-left:3px solid"]{border-left:3px solid #B39DDB !important;}
+/* 잔반 도넛 */
+.janban-row,.janban-inner{display:flex;align-items:center;gap:10px;}
 </style>
 <script>window.onload=function(){window.print();}<\/script>
 </head><body>
@@ -4124,49 +4111,34 @@ svg{display:block;}
   <div class="header-img"><img src="${headerUrl}" onerror="this.style.display='none'"></div>
   <div class="title">2026학년도 남평행복프로젝트 온(溫)마음(音) 1학기 성장 안내장</div>
 
-  <!-- 상단 두 칸 -->
   <div class="row row-top">
-
-    <!-- 1번: 활동영역 + TOP3 하나의 박스 -->
     <div class="box">
       <div class="box-title">활동 영역별 참여</div>
-      <svg viewBox="-20 0 240 205" style="width:100%;height:140px;">${catSVG.replace(/^<svg[^>]*>/,'').replace(/<\/svg>$/,'')}</svg>
-      ${catAreaGrid}
+      ${catHTML}
     </div>
-
-    <!-- 2번: 인성검사 -->
     <div class="box">
       <div class="box-title">인성검사 성장</div>
-      ${kediSVG}
+      ${kediHTML}
     </div>
-
   </div>
 
-  <!-- 하단 두 칸 -->
   <div class="row row-bot">
-
-    <!-- 3번: 잔반 -->
     <div class="box-bot">
       <div class="box-title">🥣 냠냠튼튼 초록 빈그릇 급식 잔반 기록</div>
-      ${janbanInner}
+      ${janbanHTML}
     </div>
-
-    <!-- 4번: 관찰기록 -->
     <div class="box-bot">
       <div class="box-title">✏️ ${obsTitle}</div>
-      ${obsInner}
+      ${obsHTML}
     </div>
-
   </div>
 
-  <!-- 총평 -->
   <div class="comment-box">
     <div class="comment-label">남평행복프로젝트 활동을 통해서...</div>
     <div class="comment-text">${comment.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>
   </div>
 
-  ${photoHTML ? `
-  <div class="photo-wrap">
+  ${photoHTML ? `<div class="photo-wrap">
     <div class="photo-label">📸 온마음 활동에 이렇게 참여했어요</div>
     <div class="photo-grid">${photoHTML}</div>
   </div>` : ''}
