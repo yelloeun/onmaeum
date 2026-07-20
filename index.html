@@ -3609,7 +3609,17 @@ async function selectReportStudent(id){
           ${barItems}
         </svg>
         ${!d3?`<div style="font-size:9px;color:#aaa;text-align:center;margin-top:4px">8월 2회차 검사 후 성장 비교 예정</div>`:''}
-        <div style="font-size:9px;color:#aaa;text-align:center;margin-top:2px">※ 5점 만점</div>`;
+        <div style="font-size:9px;color:#aaa;text-align:center;margin-top:2px">※ 5점 만점</div>
+        <div style="margin-top:8px;padding:7px 9px;background:#f8f8f4;border-radius:8px;border-left:3px solid #B39DDB;font-size:10px;color:#555;line-height:1.6">
+          ${(()=>{
+            const avgs = bars.map(b=>b.v1||0);
+            const topIdx = avgs.indexOf(Math.max(...avgs));
+            const topArea = kediShort[topIdx];
+            const totalAvg = avgs.filter(v=>v>0).length ? Math.round(avgs.reduce((a,b)=>a+b,0)/avgs.filter(v=>v>0).length*10)/10 : 0;
+            const level = totalAvg>=4?'매우 우수한':totalAvg>=3?'양호한':totalAvg>=2?'발전 중인':'성장 가능성이 있는';
+            return `1회차 인성검사 결과, 전체 평균 ${totalAvg}점(5점 만점)으로 ${level} 수준을 보여 주었습니다. 특히 <b>${topArea}</b> 영역에서 가장 높은 점수(${avgs[topIdx]}점)를 받아 강점이 두드러졌습니다. ${d3?`2회차 결과와 비교할 때 전반적인 성장이 확인되었으며, 앞으로도 꾸준한 성장을 기대합니다.`:`오는 8월 2회차 검사 후 1학기 대비 성장을 함께 확인해 볼 예정입니다.`}`;
+          })()}
+        </div>`;
     }
   }
 
@@ -3620,26 +3630,16 @@ async function selectReportStudent(id){
     if(janban.length===0){ janbanEl.innerHTML=`<div style="font-size:12px;color:#aaa">기록 없음</div>`; }
     else {
       const avg=Math.round(janban.reduce((a,b)=>a+(b.weight||0),0)/janban.length);
-      const zero=janban.filter(l=>(l.weight||0)===0).length;
-      const fruit=janban.filter(l=>(l.weight||0)<100).length;
-      const barColor = avg===0?'#7BC87E':avg<=100?'#74B8E0':avg<=150?'#F5A623':'#E07A3C';
-      const fruitEmojis = Array(Math.min(fruit,10)).fill('🍎').join('');
-      // 원그래프: 0g달성/열매/나머지 비율
-      const total = janban.length;
-      const zeroAngle = zero/total*360;
-      const fruitAngle = (fruit-zero)/total*360;
-      const describeArc=(cx,cy,r,startDeg,endDeg,color)=>{
-        if(endDeg-startDeg<=0) return '';
-        const toRad=d=>d*Math.PI/180;
-        const x1=cx+r*Math.cos(toRad(startDeg-90));
-        const y1=cy+r*Math.sin(toRad(startDeg-90));
-        const x2=cx+r*Math.cos(toRad(endDeg-90));
-        const y2=cy+r*Math.sin(toRad(endDeg-90));
-        const large=endDeg-startDeg>180?1:0;
-        return `<path d="M${cx},${cy} L${x1.toFixed(1)},${y1.toFixed(1)} A${r},${r} 0 ${large},1 ${x2.toFixed(1)},${y2.toFixed(1)} Z" fill="${color}"/>`;
-      };
+      const total=janban.length;
+      // 구간별 횟수
+      const cnt0 = janban.filter(l=>(l.weight||0)===0).length;           // 0g (초록)
+      const cntRed = janban.filter(l=>(l.weight||0)>0&&(l.weight||0)<=70).length;   // 1~70g 빨강
+      const cntOrange = janban.filter(l=>(l.weight||0)>70&&(l.weight||0)<=140).length; // 71~140g 주황
+      const cntYellow = janban.filter(l=>(l.weight||0)>140&&(l.weight||0)<=210).length;// 141~210g 노랑
+      const cntOver = janban.filter(l=>(l.weight||0)>210).length;         // 210g 초과 회색
+
       const donut=(cx,cy,r1,r2,startDeg,endDeg,color)=>{
-        if(endDeg-startDeg<=0) return '';
+        if(endDeg<=startDeg) return '';
         const toRad=d=>d*Math.PI/180;
         const s1x=cx+r1*Math.cos(toRad(startDeg-90)), s1y=cy+r1*Math.sin(toRad(startDeg-90));
         const e1x=cx+r1*Math.cos(toRad(endDeg-90)), e1y=cy+r1*Math.sin(toRad(endDeg-90));
@@ -3648,40 +3648,49 @@ async function selectReportStudent(id){
         const large=endDeg-startDeg>180?1:0;
         return `<path d="M${s1x.toFixed(1)},${s1y.toFixed(1)} A${r1},${r1} 0 ${large},1 ${e1x.toFixed(1)},${e1y.toFixed(1)} L${e2x.toFixed(1)},${e2y.toFixed(1)} A${r2},${r2} 0 ${large},0 ${s2x.toFixed(1)},${s2y.toFixed(1)} Z" fill="${color}"/>`;
       };
+      let a=0;
+      const seg=(n,color)=>{ const d=n/total*360; const r=donut(50,50,40,22,a,a+d,color); a+=d; return r; };
+
       janbanEl.innerHTML=`
         <div style="display:flex;align-items:center;gap:10px">
-          <svg viewBox="0 0 100 100" style="width:90px;flex-shrink:0">
-            <!-- 배경 원 -->
+          <svg viewBox="0 0 100 100" style="width:88px;flex-shrink:0">
             <circle cx="50" cy="50" r="40" fill="#e8e8e0"/>
-            <!-- 0g 달성 (진한 초록) -->
-            ${donut(50,50,40,24,0,zeroAngle,'#3D7A4A')}
-            <!-- 열매 (파스텔 초록) -->
-            ${donut(50,50,40,24,zeroAngle,zeroAngle+fruitAngle,'#7BC87E')}
-            <!-- 나머지 (회색) -->
-            ${donut(50,50,40,24,zeroAngle+fruitAngle,360,'#d0d8cc')}
-            <!-- 중앙 텍스트 -->
+            ${seg(cnt0,'#3D7A4A')}
+            ${seg(cntRed,'#E05555')}
+            ${seg(cntOrange,'#E07A3C')}
+            ${seg(cntYellow,'#F5C842')}
+            ${seg(cntOver,'#d0d8cc')}
             <text x="50" y="46" text-anchor="middle" font-size="13" font-weight="700" fill="#2F3A2E">${avg}g</text>
             <text x="50" y="57" text-anchor="middle" font-size="7" fill="#888">평균 잔반</text>
           </svg>
-          <div style="flex:1;display:flex;flex-direction:column;gap:5px">
+          <div style="flex:1;display:flex;flex-direction:column;gap:4px">
             <div style="display:flex;align-items:center;gap:5px;font-size:10px">
-              <div style="width:10px;height:10px;border-radius:50%;background:#3D7A4A;flex-shrink:0"></div>
+              <div style="width:9px;height:9px;border-radius:50%;background:#3D7A4A;flex-shrink:0"></div>
               <span style="color:#888">0g 달성</span>
-              <span style="font-weight:700;color:#3D7A4A;margin-left:auto">${zero}회 🏆</span>
+              <span style="font-weight:700;color:#3D7A4A;margin-left:auto">${cnt0}회 🏆</span>
             </div>
             <div style="display:flex;align-items:center;gap:5px;font-size:10px">
-              <div style="width:10px;height:10px;border-radius:50%;background:#7BC87E;flex-shrink:0"></div>
-              <span style="color:#888">100g 미만</span>
-              <span style="font-weight:700;color:#639922;margin-left:auto">${fruit}회</span>
+              <div style="width:9px;height:9px;border-radius:50%;background:#E05555;flex-shrink:0"></div>
+              <span style="color:#888">1~70g 🍎빨강</span>
+              <span style="font-weight:700;color:#E05555;margin-left:auto">${cntRed}회</span>
             </div>
             <div style="display:flex;align-items:center;gap:5px;font-size:10px">
-              <div style="width:10px;height:10px;border-radius:50%;background:#d0d8cc;flex-shrink:0"></div>
+              <div style="width:9px;height:9px;border-radius:50%;background:#E07A3C;flex-shrink:0"></div>
+              <span style="color:#888">71~140g 🍊주황</span>
+              <span style="font-weight:700;color:#E07A3C;margin-left:auto">${cntOrange}회</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:5px;font-size:10px">
+              <div style="width:9px;height:9px;border-radius:50%;background:#F5C842;flex-shrink:0"></div>
+              <span style="color:#888">141~210g 🍋노랑</span>
+              <span style="font-weight:700;color:#BFA020;margin-left:auto">${cntYellow}회</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:5px;font-size:10px">
+              <div style="width:9px;height:9px;border-radius:50%;background:#d0d8cc;flex-shrink:0"></div>
               <span style="color:#888">총 측정</span>
               <span style="font-weight:700;color:#888;margin-left:auto">${total}회</span>
             </div>
-            <div style="background:#EAF3DE;border-radius:6px;padding:3px 6px;font-size:10px;color:#3D7A4A;text-align:center">${fruitEmojis}${fruit>10?`+${fruit-10}`:''} 열매 ${fruit}개!</div>
           </div>
-        </div>`;
+        </div>`
     }
   }
 
@@ -4036,7 +4045,7 @@ function printReport(){
   photoDivs.forEach(d=>{ d.style.border='2px solid #3B6D11'; });
 
   const win = window.open('', '_blank');
-  win.document.write(`<!DOCTYPE html><html><head>
+    win.document.write(`<!DOCTYPE html><html><head>
     <meta charset="UTF-8">
     <title>성장 안내장</title>
     <style>
@@ -4045,42 +4054,29 @@ function printReport(){
       body {
         font-family:'Malgun Gothic','맑은 고딕',sans-serif;
         width:210mm; height:297mm;
-        padding:6mm 10mm;
+        padding:5mm 8mm 4mm;
         background:#fff;
-        font-size:11px;
+        font-size:10.5px;
         overflow:hidden;
       }
-      /* 인쇄 시 UI 요소 완전 숨기기 */
-      textarea,
-      #reportPhotoPick,
-      #regenBtn,
-      label { display:none !important; }
-      /* 사진의 X버튼, "내 컴퓨터에서 선택" 등 숨기기 */
-      #reportPhotoSelected button,
-      #reportPhotoSelected > div > button { display:none !important; }
-      /* 사진 섹션 타이틀의 버튼/라벨 숨기기 */
-      [for="reportLocalPhotoInput"] { display:none !important; }
-      /* 사진 그리드 — 크게, 가로 꽉 차게 */
+      img { max-width:100%; display:block; }
+      textarea { display:none !important; }
+      /* UI 요소 숨기기 */
+      #reportPhotoPick, #regenBtn, label { display:none !important; }
+      #reportPhotoSelected button { display:none !important; }
+      /* 섹션 여백 */
+      [style*="border-radius:10px"] { padding:5px 7px !important; margin-bottom:5px !important; }
+      /* SVG */
+      svg { width:100% !important; height:auto !important; }
+      svg[viewBox*="208"] { max-height:120px !important; }
+      /* 사진 그리드 — 크게 */
       #reportPhotoSelected {
         display:grid !important;
         grid-template-columns:repeat(4,1fr) !important;
-        gap:6px !important;
-        margin-top:4px !important;
+        gap:5px !important;
       }
-      #reportPhotoSelected > div {
-        position:relative;
-        aspect-ratio:1;
-        border-radius:8px;
-        overflow:hidden;
-        border:none !important;
-      }
-      #reportPhotoSelected img {
-        width:100%; height:100%; object-fit:cover; display:block;
-      }
-      /* SVG */
-      svg { width:100% !important; height:auto !important; max-height:170px !important; }
-      /* 섹션 패딩 */
-      [style*="border-radius:10px"] { padding:5px 7px !important; margin-bottom:5px !important; }
+      #reportPhotoSelected > div { aspect-ratio:1; border-radius:6px; overflow:hidden; border:none !important; }
+      #reportPhotoSelected img { width:100%; height:100%; object-fit:cover; display:block; }
     </style>
     <script>window.onload=function(){ window.print(); }<\/script>
   </head><body>${content}</body></html>`);
