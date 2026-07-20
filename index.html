@@ -3998,88 +3998,87 @@ function _updateReportPhotoSelected(){
 }
 
 function printReport(){
-  // 멘트 아직 생성 중이면 대기
   const comment = document.getElementById('reportComment').value||'';
   if(comment.includes('생성 중') || comment.length < 10){
     alert('선생님의 한마디가 아직 생성 중이에요. 잠시 후 다시 눌러주세요!');
     return;
   }
 
-  // textarea 내용을 div로 변환 (인쇄 시 textarea가 잘릴 수 있어서)
-  const commentEl = document.getElementById('reportComment');
-  const commentText = commentEl.value;
-  const tempDiv = document.createElement('div');
-  tempDiv.style.cssText = 'font-size:13px;line-height:1.9;color:#2F3A2E;white-space:pre-wrap;padding:4px 0';
-  tempDiv.textContent = commentText;
-  commentEl.style.display = 'none';
-  commentEl.parentNode.insertBefore(tempDiv, commentEl);
+  // 현재 화면의 데이터를 직접 수집
+  const s = students.find(x=>x.id===reportStudent);
+  if(!s) return;
 
-  // 사진 선택 UI 숨기기
-  const pickEl = document.getElementById('reportPhotoPick');
-  const regenBtn = document.getElementById('regenBtn');
-  const photoLabel = pickEl?.previousElementSibling;
-  const photoSectionTitle = document.querySelector('[for="reportLocalPhotoInput"]')?.closest('div');
-  const localLabel = document.querySelector('label[for="reportLocalPhotoInput"]');
-  // 사진 X버튼들 숨기기
-  const xBtns = document.querySelectorAll('#reportPhotoSelected button');
-  xBtns.forEach(b=>b.style.display='none');
-  // 사진 테두리 제거
-  const photoDivs = document.querySelectorAll('#reportPhotoSelected > div');
-  photoDivs.forEach(d=>{ d.style.border='none'; d.style.position='relative'; });
+  const catBarsHTML = document.getElementById('reportCatBars')?.innerHTML||'';
+  const kediBarsHTML = document.getElementById('reportKediBars')?.innerHTML||'';
+  const janbanHTML = document.getElementById('reportJanban')?.innerHTML||'';
+  const obsHTML = document.getElementById('reportObserve')?.innerHTML||'';
+  const obsTitle = document.getElementById('reportObserveTitle')?.textContent||'아이의 관찰 기록';
 
-  if(pickEl) pickEl.style.display='none';
-  if(regenBtn) regenBtn.style.display='none';
-  if(photoLabel && photoLabel.textContent?.includes('갤러리')) photoLabel.style.display='none';
-  if(localLabel) localLabel.style.display='none';
+  // 사진
+  const photoHTML = reportSelectedPhotos.map(u=>
+    `<div style="aspect-ratio:1;border-radius:8px;overflow:hidden;"><img src="${u}" style="width:100%;height:100%;object-fit:cover;display:block;"></div>`
+  ).join('');
 
-  const content = document.getElementById('reportPrintArea').innerHTML;
+  // 헤더 이미지
+  const headerSrc = document.getElementById('reportHeaderImg')?.src||'';
 
-  // 원래대로 복구
-  tempDiv.remove();
-  commentEl.style.display='';
-  if(pickEl) pickEl.style.display='flex';
-  if(regenBtn) regenBtn.style.display='';
-  if(photoLabel) photoLabel.style.display='';
-  if(localLabel) localLabel.style.display='';
-  xBtns.forEach(b=>b.style.display='');
-  photoDivs.forEach(d=>{ d.style.border='2px solid #3B6D11'; });
+  // Cloudinary URL
+  const headerUrl = 'https://res.cloudinary.com/dukzrwvx6/image/upload/f_auto,q_auto/%EC%A7%80%EA%B5%AC_%EC%98%A8_On_%EB%8F%84_%EB%82%AE%EC%B6%94%EB%8A%94_%EC%98%A8_%E6%BA%AB_%EB%A7%88%EC%9D%8C_qwmzrr.png';
 
   const win = window.open('', '_blank');
-    win.document.write(`<!DOCTYPE html><html><head>
-    <meta charset="UTF-8">
-    <title>성장 안내장</title>
-    <style>
-      * { box-sizing:border-box; margin:0; padding:0; }
-      @page { size:A4 portrait; margin:0; }
-      body {
-        font-family:'Malgun Gothic','맑은 고딕',sans-serif;
-        width:210mm; height:297mm;
-        padding:5mm 8mm 4mm;
-        background:#fff;
-        font-size:10.5px;
-        overflow:hidden;
-      }
-      img { max-width:100%; display:block; }
-      textarea { display:none !important; }
-      /* UI 요소 숨기기 */
-      #reportPhotoPick, #regenBtn, label { display:none !important; }
-      #reportPhotoSelected button { display:none !important; }
-      /* 섹션 여백 */
-      [style*="border-radius:10px"] { padding:5px 7px !important; margin-bottom:5px !important; }
-      /* SVG */
-      svg { width:100% !important; height:auto !important; }
-      svg[viewBox*="208"] { max-height:120px !important; }
-      /* 사진 그리드 — 크게 */
-      #reportPhotoSelected {
-        display:grid !important;
-        grid-template-columns:repeat(4,1fr) !important;
-        gap:5px !important;
-      }
-      #reportPhotoSelected > div { aspect-ratio:1; border-radius:6px; overflow:hidden; border:none !important; }
-      #reportPhotoSelected img { width:100%; height:100%; object-fit:cover; display:block; }
-    </style>
-    <script>window.onload=function(){ window.print(); }<\/script>
-  </head><body>${content}</body></html>`);
+  win.document.write(`<!DOCTYPE html><html><head>
+<meta charset="UTF-8"><title>성장 안내장</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+@page{size:A4 portrait;margin:0;}
+html,body{
+  font-family:'Malgun Gothic','맑은 고딕',sans-serif;
+  width:210mm;height:297mm;max-height:297mm;
+  padding:0;background:#fff;font-size:10px;overflow:hidden;
+}
+.wrap{padding:4mm 8mm 3mm;height:297mm;display:flex;flex-direction:column;}
+.header-img{width:100%;display:block;max-height:28mm;object-fit:cover;}
+.title{text-align:center;font-size:15px;font-weight:900;color:#3B6D11;padding:4px 0 5px;border-bottom:1px solid #e0e0e0;margin-bottom:5px;}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:6px;}
+.box{background:#f8f8f4;border-radius:8px;padding:7px 9px;border:1px solid #e8e8e0;}
+.box-title{font-size:10px;color:#888;margin-bottom:5px;font-weight:700;}
+.comment-box{border:1px solid #e0e0e0;border-radius:8px;padding:9px 11px;margin-bottom:6px;}
+.comment-label{font-size:10px;color:#888;margin-bottom:4px;}
+.comment-text{font-size:10.5px;line-height:1.75;color:#2F3A2E;white-space:pre-wrap;}
+.photo-wrap{border-radius:8px;padding:7px 9px;border:1px solid #e8e8e0;background:#f8f8f4;}
+.photo-label{font-size:10px;color:#555;font-weight:700;margin-bottom:5px;}
+.photo-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;}
+.photo-grid div{aspect-ratio:1;border-radius:6px;overflow:hidden;}
+.photo-grid img{width:100%;height:100%;object-fit:cover;display:block;}
+svg{width:100%;height:auto;}
+</style>
+</head><body><div class="wrap">
+  <img class="header-img" src="${headerUrl}" onerror="this.style.display='none'">
+  <div class="title">2026학년도 남평행복프로젝트 온(溫)마음(音) 1학기 성장 안내장</div>
+
+  <div class="grid2">
+    <div class="box"><div class="box-title">활동 영역별 참여</div>${catBarsHTML}</div>
+    <div class="box"><div class="box-title">인성검사 성장</div>${kediBarsHTML}</div>
+  </div>
+
+  <div class="grid2">
+    <div class="box"><div class="box-title">🥣 냠냠튼튼 초록 빈그릇 급식 잔반 기록</div>${janbanHTML}</div>
+    <div class="box"><div class="box-title">✏️ ${obsTitle}</div>${obsHTML}</div>
+  </div>
+
+  <div class="comment-box">
+    <div class="comment-label">남평행복프로젝트 활동을 통해서...</div>
+    <div class="comment-text">${comment.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>
+  </div>
+
+  ${photoHTML ? `<div class="photo-wrap">
+    <div class="photo-label">📸 온마음 활동에 이렇게 참여했어요</div>
+    <div class="photo-grid">${photoHTML}</div>
+  </div>` : ''}
+
+</div>
+<script>window.onload=function(){window.print();}<\/script>
+</body></html>`);
   win.document.close();
 }
 
