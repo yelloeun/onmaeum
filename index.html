@@ -3713,8 +3713,8 @@ async function selectReportStudent(id){
     if(allObsLogs.length===0){ obsEl.innerHTML=`<div style="font-size:12px;color:#aaa">기록 없음</div>`; }
     else obsEl.innerHTML=allObsLogs.map(o=>{
       const text=o.discover||o.text||o.feeling||'';
-      return `<div><span style="font-size:12px;color:#2F3A2E;line-height:1.6">"${text.slice(0,70)}${text.length>70?'…':''}"</span></div>`;
-    }).join('<div style="height:0.5px;background:#e8e8e0;margin:4px 0"></div>');
+      return `<div style="font-size:12px;color:#2F3A2E;line-height:1.7;padding:4px 0">"${text.slice(0,70)}${text.length>70?'…':''}"</div>`;
+    }).join('<div style="height:0.5px;background:#e8e8e0;margin:3px 0"></div>');
   }
 
   // 갤러리 사진 선택
@@ -4033,18 +4033,21 @@ html,body{
 .wrap{
   height:297mm;
   display:flex;flex-direction:column;
-  padding:6mm 8mm;
+  padding:5mm 7mm;
   gap:4px;
 }
 .header-img img{width:100%;display:block;border-radius:4px;}
 .title{
-  text-align:center;font-size:17px;font-weight:900;color:#3B6D11;
-  padding:5px 0 6px;border-bottom:1.5px solid #e0e0d8;
+  text-align:center;
+  font-size:20px;font-weight:900;color:#3B6D11;
+  letter-spacing:-0.5px;
+  padding:4px 0 5px;
+  border-bottom:1.5px solid #e0e0d8;
 }
-/* 상단 두 칸 — 내용에 맞게 줄어듦 (여백 X) */
+/* 상단 두 칸 */
 .row-top{display:grid;grid-template-columns:1fr 1fr;gap:5px;flex:0 0 auto;}
-/* 하단 두 칸 — 더 크게 */
-.row-bot{display:grid;grid-template-columns:1fr 1fr;gap:5px;flex:1 1 auto;min-height:0;}
+/* 하단 두 칸 — 나머지 공간 균등 분배 */
+.row-bot{display:grid;grid-template-columns:1fr 1fr;gap:5px;flex:1 1 0;min-height:0;}
 .box{
   background:#f8f8f4;border-radius:8px;
   padding:7px 9px;border:1px solid #e8e8e0;
@@ -4055,25 +4058,30 @@ html,body{
   padding:8px 10px;border:1px solid #e8e8e0;
   overflow:hidden;
   display:flex;flex-direction:column;
+  justify-content:center;
 }
-.box-title{font-size:10px;color:#888;font-weight:700;margin-bottom:4px;}
-/* SVG 크기 제한 — 여백 없애기 */
+.box-title{font-size:10.5px;color:#666;font-weight:700;margin-bottom:5px;}
 svg{width:100%;height:auto;display:block;}
-svg[viewBox*="-20"]{max-height:140px;}
-svg[viewBox*="208"]{max-height:100px;}
+svg[viewBox*="-20"]{max-height:130px;}
+svg[viewBox*="208"]{max-height:95px;}
 /* 총평 */
 .comment-box{
   border:1px solid #e0e0d8;border-radius:8px;
   padding:7px 10px;flex:0 0 auto;
 }
-.comment-label{font-size:9.5px;color:#888;margin-bottom:3px;}
-.comment-text{font-size:10px;line-height:1.7;color:#2F3A2E;white-space:pre-wrap;}
+.comment-label{font-size:10px;color:#888;margin-bottom:3px;font-weight:700;}
+.comment-text{font-size:11px;line-height:1.75;color:#2F3A2E;white-space:pre-wrap;}
 /* 사진 */
 .photo-wrap{border-radius:8px;padding:6px 9px;border:1px solid #e8e8e0;background:#f8f8f4;flex:0 0 auto;}
-.photo-label{font-size:10px;color:#555;font-weight:700;margin-bottom:4px;}
+.photo-label{font-size:10.5px;color:#555;font-weight:700;margin-bottom:4px;}
 .photo-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;}
 .photo-grid div{aspect-ratio:1;border-radius:6px;overflow:hidden;}
 .photo-grid img{width:100%;height:100%;object-fit:cover;display:block;}
+/* 잔반 — 세로 중앙 정렬 */
+.janban-inner{display:flex;align-items:center;gap:10px;height:100%;}
+/* 관찰기록 — 세로 중앙 정렬 */
+.obs-inner{display:flex;flex-direction:column;justify-content:center;height:100%;gap:8px;}
+.obs-inner div{font-size:11px;color:#2F3A2E;line-height:1.65;}
 </style>
 <script>window.onload=function(){window.print();}<\/script>
 </head><body>
@@ -4083,7 +4091,7 @@ svg[viewBox*="208"]{max-height:100px;}
 
   <div class="title">2026학년도 남평행복프로젝트 온(溫)마음(音) 1학기 성장 안내장</div>
 
-  <!-- 상단 두 칸: 내용만큼만 높이 차지 -->
+  <!-- 상단 두 칸 -->
   <div class="row-top">
     <div class="box">
       <div class="box-title">활동 영역별 참여</div>
@@ -4095,23 +4103,25 @@ svg[viewBox*="208"]{max-height:100px;}
     </div>
   </div>
 
-  <!-- 하단 두 칸: 나머지 공간 채움 -->
+  <!-- 하단 두 칸 — 나머지 공간 꽉 채움 -->
   <div class="row-bot">
     <div class="box-bot">
       <div class="box-title">🥣 냠냠튼튼 초록 빈그릇 급식 잔반 기록</div>
-      <div style="flex:1;display:flex;align-items:center;">${janbanHTML}</div>
+      ${janbanHTML}
     </div>
     <div class="box-bot">
       <div class="box-title">✏️ ${obsTitle}</div>
-      <div style="flex:1;">${obsHTML}</div>
+      ${obsHTML}
     </div>
   </div>
 
+  <!-- 총평 -->
   <div class="comment-box">
     <div class="comment-label">남평행복프로젝트 활동을 통해서...</div>
     <div class="comment-text">${comment.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>
   </div>
 
+  <!-- 사진 -->
   ${photoHTML ? `
   <div class="photo-wrap">
     <div class="photo-label">📸 온마음 활동에 이렇게 참여했어요</div>
