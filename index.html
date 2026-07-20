@@ -1944,6 +1944,18 @@ function triggerPWAInstall(){
       </div>
 
     </div>
+
+    <!-- AI 종합 총평 패널 -->
+    <div style="margin-top:20px;background:#f8f8f4;border-radius:16px;padding:20px 24px;border:1.5px solid var(--line)">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <h3 style="margin:0;font-size:17px">🤖 AI 종합 총평</h3>
+        <div style="display:flex;gap:8px">
+          <button onclick="generateStatsComment()" style="background:var(--accent);color:#fff;border:none;border-radius:999px;padding:7px 16px;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer">🔄 생성</button>
+          <button onclick="openReportModal('all-pdf')" style="background:linear-gradient(135deg,#3D7A4A,#6FB37C);color:#fff;border:none;border-radius:999px;padding:7px 16px;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer">📊 전체 리포트 PDF</button>
+        </div>
+      </div>
+      <div id="statsCommentArea" style="font-size:13px;line-height:1.8;color:var(--ink);background:#fff;border-radius:10px;padding:14px;border:1px solid var(--line);min-height:80px;white-space:pre-wrap">버튼을 눌러 AI 총평을 생성하세요 🌿</div>
+    </div>
   </div>
 </main>
 
@@ -2296,6 +2308,18 @@ function triggerPWAInstall(){
         <h3>🗓️ 14일 × 12명 활동 히트맵 <span style="color:var(--ink-soft);font-size:11px;font-weight:600">Activity Heatmap</span></h3>
         <p class="lead">색이 진할수록 그날 점수가 높음. 연속된 회색은 셀프로그 미기록을 의미.</p>
         <div id="heatmap"></div>
+      </div>
+
+      <!-- AI 종합 총평 패널 (교사분석) -->
+      <div class="tpanel" style="grid-column:1 / -1">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+          <h3 style="margin:0">🤖 AI 종합 총평</h3>
+          <div style="display:flex;gap:8px">
+            <button onclick="generateTeacherAllComment()" style="background:var(--accent);color:#fff;border:none;border-radius:999px;padding:7px 16px;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer">🔄 생성</button>
+            <button onclick="openReportModal('all-pdf')" style="background:linear-gradient(135deg,#3D7A4A,#6FB37C);color:#fff;border:none;border-radius:999px;padding:7px 16px;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer">📊 전체 리포트 PDF</button>
+          </div>
+        </div>
+        <div id="teacherAllCommentArea" style="font-size:13px;line-height:1.8;color:var(--ink);background:#fff;border-radius:10px;padding:14px;border:1px solid var(--line);min-height:80px;white-space:pre-wrap">버튼을 눌러 AI 총평을 생성하세요 🌿</div>
       </div>
     </div>
   </div>
@@ -4096,10 +4120,7 @@ svg[viewBox*="-20"]{height:140px !important;}
   ${photoHTML?`<div class="photo-wrap"><div class="photo-label">📸 온마음 활동에 이렇게 참여했어요</div><div class="photo-grid">${photoHTML}</div></div>`:''}
 </div>
 <script>
-// 이미지 모두 로드 후 인쇄
-window.addEventListener('load', function(){
-  setTimeout(function(){ window.print(); }, 1500);
-});
+// 외부에서 win.print() 호출하므로 내부 자동실행 불필요
 <\/script>
 </body></html>`;
 
@@ -4107,6 +4128,8 @@ window.addEventListener('load', function(){
   win.document.open();
   win.document.write(html);
   win.document.close();
+  // 새 창에서 직접 print 호출 (이미지 로드 대기)
+  setTimeout(()=>{ try{ win.focus(); win.print(); } catch(e){} }, 2000);
 }
 
 function resetReport(){
@@ -5060,12 +5083,34 @@ ${jStudent.map((s,i)=>{
 }).join('')}
 </tbody></table>`}
 
+<h2>🤖 AI 종합 총평</h2>
+<div id="allReportComment" style="background:#f8f8f4;border-radius:10px;padding:16px;border-left:4px solid #3D7A4A;line-height:1.8;font-size:13px;color:#2F3A2E;white-space:pre-wrap;">생성 중이에요...</div>
+
 <div class="footer">남평 온(溫)마음(音) 정원 Self-Log · 남평초등학교·병설유치원 · ${ds} 출력</div>
 </body></html>`;
 
   const win=window.open('','_blank','width=900,height=700');
   win.document.write(html); win.document.close();
-  setTimeout(()=>win.print(), 600);
+
+  // AI 총평 생성 후 인쇄
+  (async()=>{
+    const topStudents = sPts.slice(0,3).map(s=>`${s.id}(${s.pts}점)`).join(', ');
+    const topActNames = actTop.slice(0,3).map(([t,c])=>`${t}(${c}회)`).join(', ');
+    try {
+      const resp = await fetch('https://api.anthropic.com/v1/messages',{
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({
+          model:'claude-sonnet-4-6', max_tokens:600,
+          messages:[{role:'user',content:`남평행복프로젝트 온(溫)마음(音) 1학기 전체 통계를 바탕으로 담임 선생님을 위한 종합 총평을 3~4문장으로 작성해주세요.\n데이터: 총 학생 ${sPts.length}명, 전체 활동 ${allLogs.filter(l=>l.type==='activity').length}건, 잔반 평균 ${jAvg}g\n상위 학생: ${topStudents}\n인기 활동 TOP3: ${topActNames}\n조건: 학급 전체의 성장과 특징을 따뜻하게 분석, 교육적 의미 언급, "AI" 표현 금지`}]
+        })
+      });
+      const data = await resp.json();
+      const txt = data.content?.[0]?.text||'';
+      const el = win.document.getElementById('allReportComment');
+      if(el && txt) el.textContent = txt;
+    } catch(e){}
+    setTimeout(()=>{ try{ win.focus(); win.print(); } catch(e){} }, 800);
+  })();
 }
 
 /* ============ 주간 리포트 PDF ============ */
@@ -9299,6 +9344,40 @@ function drawTimeline(id){
 function scrollToPanel(id){
   const el = document.getElementById(id);
   if(el) el.scrollIntoView({behavior:'smooth', block:'center'});
+}
+
+async function generateStatsComment(){
+  const el = document.getElementById('statsCommentArea');
+  if(el) el.textContent = '✨ 생성 중이에요...';
+  await _generateAllComment(el);
+}
+async function generateTeacherAllComment(){
+  const el = document.getElementById('teacherAllCommentArea');
+  if(el) el.textContent = '✨ 생성 중이에요...';
+  await _generateAllComment(el);
+}
+async function _generateAllComment(el){
+  const total = allLogs.filter(l=>l.type==='activity').length;
+  const sPts2 = students.map(s=>({id:s.id,pts:allLogs.filter(l=>l.studentId===s.id&&l.type==='activity').reduce((a,b)=>a+(b.points||0),0)})).sort((a,b)=>b.pts-a.pts);
+  const topS = sPts2.slice(0,3).map(s=>`${s.id}(${s.pts}점)`).join(', ');
+  const actCount2={};
+  allLogs.filter(l=>l.type==='activity').forEach(l=>{ actCount2[l.activity]=(actCount2[l.activity]||0)+1; });
+  const topA = Object.entries(actCount2).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([t,c])=>`${t}(${c}회)`).join(', ');
+  const jAvg2 = janbanLogs.length ? Math.round(janbanLogs.reduce((a,b)=>a+(b.weight||0),0)/janbanLogs.length) : 0;
+  try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({model:'claude-sonnet-4-6', max_tokens:500,
+        messages:[{role:'user',content:`남평행복프로젝트 온(溫)마음(音) 1학기 전체 데이터를 분석해 교사를 위한 종합 총평 3~4문장을 작성해주세요.\n데이터: 총 ${sPts2.length}명, 활동 ${total}건, 잔반 평균 ${jAvg2}g\n상위학생: ${topS}\n인기활동: ${topA}\n조건: 학급 전체 성장과 특징 따뜻하게 분석, 교육적 의미 포함, "AI" 표현 금지`}]
+      })
+    });
+    const data = await resp.json();
+    const txt = data.content?.[0]?.text||'';
+    if(el && txt) el.textContent = txt;
+    else if(el) el.textContent = `이번 1학기 동안 ${sPts2.length}명의 학생들이 남평행복프로젝트에 성실히 참여하며 자연, 생명, 인성 영역에서 고르게 성장하였습니다. 잔반 평균 ${jAvg2}g을 달성하며 올바른 식습관도 함께 기르고 있습니다.`;
+  } catch(e){
+    if(el) el.textContent = `이번 1학기 동안 ${sPts2.length}명의 학생들이 남평행복프로젝트에 성실히 참여하며 자연, 생명, 인성 영역에서 고르게 성장하였습니다. 특히 ${topA.split(',')[0]} 활동에서 높은 참여도를 보였으며, 잔반 줄이기 활동에서도 평균 ${jAvg2}g의 성과를 달성하였습니다.`;
+  }
 }
 
 function generateTeacherComment(){
