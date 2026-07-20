@@ -4007,7 +4007,6 @@ function printReport(){
   const s = students.find(x=>x.id===reportStudent);
   if(!s) return;
 
-  // 각 섹션 HTML 수집
   const catBarsHTML  = document.getElementById('reportCatBars')?.innerHTML||'';
   const kediBarsHTML = document.getElementById('reportKediBars')?.innerHTML||'';
   const janbanHTML   = document.getElementById('reportJanban')?.innerHTML||'';
@@ -4037,34 +4036,40 @@ html,body{
   padding:6mm 8mm;
   gap:4px;
 }
-.header-img{width:100%;display:block;border-radius:6px;overflow:hidden;}
-.header-img img{width:100%;display:block;}
+.header-img img{width:100%;display:block;border-radius:4px;}
 .title{
-  text-align:center;font-size:14px;font-weight:900;color:#3B6D11;
-  padding:4px 0 5px;border-bottom:1.5px solid #e0e0d8;
+  text-align:center;font-size:17px;font-weight:900;color:#3B6D11;
+  padding:5px 0 6px;border-bottom:1.5px solid #e0e0d8;
 }
-/* 위아래 두 줄 그리드 */
-.row{display:grid;grid-template-columns:1fr 1fr;gap:5px;}
+/* 상단 두 칸 — 내용에 맞게 줄어듦 (여백 X) */
+.row-top{display:grid;grid-template-columns:1fr 1fr;gap:5px;flex:0 0 auto;}
+/* 하단 두 칸 — 더 크게 */
+.row-bot{display:grid;grid-template-columns:1fr 1fr;gap:5px;flex:1 1 auto;min-height:0;}
 .box{
   background:#f8f8f4;border-radius:8px;
   padding:7px 9px;border:1px solid #e8e8e0;
   overflow:hidden;
 }
+.box-bot{
+  background:#f8f8f4;border-radius:8px;
+  padding:8px 10px;border:1px solid #e8e8e0;
+  overflow:hidden;
+  display:flex;flex-direction:column;
+}
 .box-title{font-size:10px;color:#888;font-weight:700;margin-bottom:4px;}
-/* 레이더 SVG 크기 줄이기 */
-.box svg[viewBox*="-20"]{max-height:130px !important;}
-/* 인성 막대 SVG */
-.box svg[viewBox*="208"]{max-height:110px !important;}
+/* SVG 크기 제한 — 여백 없애기 */
 svg{width:100%;height:auto;display:block;}
+svg[viewBox*="-20"]{max-height:140px;}
+svg[viewBox*="208"]{max-height:100px;}
 /* 총평 */
 .comment-box{
   border:1px solid #e0e0d8;border-radius:8px;
-  padding:7px 10px;
+  padding:7px 10px;flex:0 0 auto;
 }
 .comment-label{font-size:9.5px;color:#888;margin-bottom:3px;}
 .comment-text{font-size:10px;line-height:1.7;color:#2F3A2E;white-space:pre-wrap;}
 /* 사진 */
-.photo-wrap{border-radius:8px;padding:6px 9px;border:1px solid #e8e8e0;background:#f8f8f4;}
+.photo-wrap{border-radius:8px;padding:6px 9px;border:1px solid #e8e8e0;background:#f8f8f4;flex:0 0 auto;}
 .photo-label{font-size:10px;color:#555;font-weight:700;margin-bottom:4px;}
 .photo-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;}
 .photo-grid div{aspect-ratio:1;border-radius:6px;overflow:hidden;}
@@ -4078,36 +4083,28 @@ svg{width:100%;height:auto;display:block;}
 
   <div class="title">2026학년도 남평행복프로젝트 온(溫)마음(音) 1학기 성장 안내장</div>
 
-  <div class="row" style="flex:1;min-height:0;">
-
-    <!-- 1번 칸: 활동영역 + TOP3 하나의 박스 -->
-    <div class="box" style="display:flex;flex-direction:column;">
+  <!-- 상단 두 칸: 내용만큼만 높이 차지 -->
+  <div class="row-top">
+    <div class="box">
       <div class="box-title">활동 영역별 참여</div>
-      <div style="flex:1;min-height:0;overflow:hidden;">${catBarsHTML}</div>
+      ${catBarsHTML}
     </div>
-
-    <!-- 2번 칸: 인성검사 -->
-    <div class="box" style="display:flex;flex-direction:column;">
+    <div class="box">
       <div class="box-title">인성검사 성장</div>
-      <div style="flex:1;min-height:0;overflow:hidden;">${kediBarsHTML}</div>
+      ${kediBarsHTML}
     </div>
-
   </div>
 
-  <div class="row" style="flex:0 0 auto;">
-
-    <!-- 3번 칸: 잔반 -->
-    <div class="box">
+  <!-- 하단 두 칸: 나머지 공간 채움 -->
+  <div class="row-bot">
+    <div class="box-bot">
       <div class="box-title">🥣 냠냠튼튼 초록 빈그릇 급식 잔반 기록</div>
-      ${janbanHTML}
+      <div style="flex:1;display:flex;align-items:center;">${janbanHTML}</div>
     </div>
-
-    <!-- 4번 칸: 관찰기록 -->
-    <div class="box">
+    <div class="box-bot">
       <div class="box-title">✏️ ${obsTitle}</div>
-      ${obsHTML}
+      <div style="flex:1;">${obsHTML}</div>
     </div>
-
   </div>
 
   <div class="comment-box">
