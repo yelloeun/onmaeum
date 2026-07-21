@@ -1097,6 +1097,11 @@ function triggerPWAInstall(){
         border-radius:12px;padding:11px 18px;font-family:inherit;font-size:13px;
         font-weight:800;cursor:pointer;box-shadow:0 3px 10px rgba(61,122,74,.3)
       ">📊 전체 리포트 PDF</button>
+      <button onclick="downloadHomeLetterPDF()" style="
+        background:linear-gradient(135deg,#E07A3C,#F0A860);color:#fff;border:none;
+        border-radius:12px;padding:11px 18px;font-family:inherit;font-size:13px;
+        font-weight:800;cursor:pointer;box-shadow:0 3px 10px rgba(224,122,60,.3)
+      ">🏫 가정통신문 PDF</button>
       <button onclick="openReportModal('month-pdf')" style="
         background:linear-gradient(135deg,#3D7A4A,#6FB37C);color:#fff;border:none;
         border-radius:12px;padding:11px 18px;font-family:inherit;font-size:13px;
@@ -1970,6 +1975,7 @@ function triggerPWAInstall(){
         <div style="display:flex;gap:8px">
           <button onclick="generateStatsComment()" style="background:var(--accent);color:#fff;border:none;border-radius:999px;padding:7px 16px;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer">🔄 생성</button>
           <button onclick="downloadAllPDFDirect()" style="background:linear-gradient(135deg,#3D7A4A,#6FB37C);color:#fff;border:none;border-radius:999px;padding:7px 16px;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer">📊 전체 리포트 PDF</button>
+          <button onclick="downloadHomeLetterPDF()" style="background:linear-gradient(135deg,#E07A3C,#F0A860);color:#fff;border:none;border-radius:999px;padding:7px 16px;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer">🏫 가정통신문 PDF</button>
         </div>
       </div>
       <div id="statsCommentArea" style="font-size:13px;line-height:1.8;color:var(--ink);background:#fff;border-radius:10px;padding:14px;border:1px solid var(--line);min-height:80px;white-space:pre-wrap">버튼을 눌러 종합 총평을 생성하세요 🌿</div>
@@ -2335,6 +2341,7 @@ function triggerPWAInstall(){
           <div style="display:flex;gap:8px">
             <button onclick="generateTeacherAllComment()" style="background:var(--accent);color:#fff;border:none;border-radius:999px;padding:7px 16px;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer">🔄 생성</button>
             <button onclick="downloadAllPDFDirect()" style="background:linear-gradient(135deg,#3D7A4A,#6FB37C);color:#fff;border:none;border-radius:999px;padding:7px 16px;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer">📊 전체 리포트 PDF</button>
+            <button onclick="downloadHomeLetterPDF()" style="background:linear-gradient(135deg,#E07A3C,#F0A860);color:#fff;border:none;border-radius:999px;padding:7px 16px;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer">🏫 가정통신문 PDF</button>
           </div>
         </div>
         <div id="teacherAllCommentArea" style="font-size:13px;line-height:1.8;color:var(--ink);background:#fff;border-radius:10px;padding:14px;border:1px solid var(--line);min-height:80px;white-space:pre-wrap">버튼을 눌러 종합 총평을 생성하세요 🌿</div>
@@ -5333,6 +5340,161 @@ function buildLongReview({studentsCount, actCount, totalPts, jAvg, zeroPct, catP
   const p7 = `2학기에는 지금까지 다져온 자연에 대한 관심과 서로를 배려하는 마음을 더욱 깊이 있게 확장해 나갈 수 있도록 지도할 계획입니다. 아이들 한 명 한 명이 자기만의 속도로 성장할 수 있도록 세심히 살피고, 잘한 점은 충분히 칭찬하며, 아직 서툰 부분은 기다려주는 마음으로 함께하겠습니다. 남평행복프로젝트 온(溫)마음(音)이 아이들의 일상 속에 따뜻하게 스며들어, 자연을 사랑하고 사람을 배려하는 건강한 마음의 씨앗으로 자라나기를 바랍니다.`;
 
   return [p1,p2,p3,p4,p5,p6,p7].filter(Boolean).join('\n\n');
+}
+
+/* ============ 가정통신문 PDF (학기말 학교 전체 결과 요약, A4 1장) ============ */
+function downloadHomeLetterPDF(){
+  const actLogs = allLogs.filter(l=>l.type==='activity');
+  const jLogs = allLogs.filter(l=>l.type==='janban'&&typeof l.weight==='number');
+  const totalPts = actLogs.reduce((a,b)=>a+(b.points||0),0);
+  const jAvg = jLogs.length ? Math.round(jLogs.reduce((a,b)=>a+(b.weight||0),0)/jLogs.length) : 0;
+  const zeroCnt = jLogs.filter(l=>l.weight===0).length;
+  const zeroPct = Math.round(zeroCnt/Math.max(jLogs.length,1)*100);
+
+  const cats={nature:0,life:0,heart:0,sound:0};
+  actLogs.forEach(l=>{if(cats[l.category]!==undefined)cats[l.category]+=(l.points||0);});
+  const catTotal=Object.values(cats).reduce((a,b)=>a+b,1);
+  const catPct={
+    nature:Math.round(cats.nature/catTotal*100),
+    life:Math.round(cats.life/catTotal*100),
+    heart:Math.round(cats.heart/catTotal*100),
+    sound:Math.round(cats.sound/catTotal*100)
+  };
+
+  const actCount={};
+  actLogs.forEach(l=>{actCount[l.activity]=(actCount[l.activity]||0)+1;});
+  const top5=Object.entries(actCount).sort((a,b)=>b[1]-a[1]).slice(0,5);
+
+  const todayStr = new Date().toLocaleDateString('ko-KR', {year:'numeric',month:'long',day:'numeric'});
+
+  const html = `<!DOCTYPE html><html><head>
+<meta charset="UTF-8">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+@page{size:A4 portrait;margin:0;}
+html,body{width:210mm;height:297mm;overflow:hidden;background:#fff;font-family:'Malgun Gothic','맑은 고딕',sans-serif;color:#222;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+#printPad{width:100%;height:297mm;box-sizing:border-box;padding:10mm 12mm;overflow:hidden;}
+#letter{border:2px solid #222;}
+.lh-top{display:flex;align-items:center;border-bottom:2px solid #222;}
+.lh-logo{width:70px;height:70px;border-radius:50%;border:2px solid #3B6D11;display:flex;align-items:center;justify-content:center;flex:0 0 auto;margin:8px;font-size:10px;font-weight:800;color:#3B6D11;text-align:center;line-height:1.2;}
+.lh-title{flex:1;text-align:center;font-size:30px;font-weight:900;letter-spacing:10px;padding:14px 0;}
+.lh-side{flex:0 0 auto;width:150px;border-left:2px solid #222;text-align:center;padding:6px 4px;}
+.lh-side .l1{font-size:11px;font-weight:800;color:#3D7A4A;}
+.lh-side .l2{font-size:16px;font-weight:900;margin-top:2px;}
+.lh-contact{border-bottom:2px solid #222;text-align:center;font-size:10.5px;padding:5px 6px;font-weight:600;}
+.lh-body{padding:12px 20px;}
+.hero{text-align:center;margin-bottom:8px;}
+.hero .big{font-size:22px;font-weight:900;}
+.hero .big .accent1{color:#3B6D11;}
+.hero .big .accent2{color:#3F8AA6;}
+.hero .sub{font-size:11px;color:#777;margin-top:2px;}
+.intro{font-size:11.5px;line-height:1.7;margin:10px 0;text-align:justify;}
+h4{font-size:13px;color:#3B6D11;margin:10px 0 5px;border-left:4px solid #3B6D11;padding-left:6px;}
+.cat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:8px;}
+.cat-box{border-radius:8px;padding:6px 8px;text-align:center;}
+.cat-val{font-size:17px;font-weight:900;}
+table{width:100%;border-collapse:collapse;font-size:11px;margin-bottom:8px;}
+th,td{border:1px solid #ccc;padding:4px 7px;text-align:left;}
+th{background:#EAF3DE;font-weight:700;color:#3B6D11;}
+.summary-row{display:flex;gap:8px;margin-bottom:8px;}
+.summary-box{flex:1;background:#f8f8f4;border:1px solid #e0e0e0;border-radius:8px;padding:8px 10px;text-align:center;}
+.summary-box b{font-size:16px;color:#3B6D11;display:block;}
+.footer-sign{text-align:center;margin-top:12px;}
+.footer-sign .date{font-size:12px;margin-bottom:4px;}
+.footer-sign .who{font-size:15px;font-weight:900;}
+</style>
+</head><body>
+<div id="printPad"><div id="letter">
+  <div class="lh-top">
+    <div class="lh-logo">남평<br>초등<br>학교</div>
+    <div class="lh-title">가정통신문</div>
+    <div class="lh-side"><div class="l1">꿈 · 인성 · 역량</div><div class="l2">남평교육</div></div>
+  </div>
+  <div class="lh-contact">남평초등학교 병설유치원 / 교무실 033)562-3007 · http://nampyung.gwe.es.kr</div>
+  <div class="lh-body">
+    <div class="hero">
+      <div class="big"><span class="accent1">지구 온(溫)도 낮추는</span> <span class="accent2">온(溫)마음(音)</span> 🌏</div>
+      <div class="sub">- 남평행복프로젝트 온(溫)마음(音) 1학기 결과 안내 -</div>
+    </div>
+    <div class="intro">
+      학부모님 안녕하십니까? 어느덧 무더운 여름, 아이들과 함께 걸어온 「남평 행복 프로젝트: 온(溫)마음(音)」의 1학기 여정이 마무리되었습니다.
+      그동안 보내주신 따뜻한 관심과 응원 덕분에, 우리 아이들은 자연을 탐구하고 생명을 존중하며 서로를 배려하는 마음을 조금씩 키워왔습니다.
+      한 학기 동안 아이들이 일궈온 소중한 결실을 아래와 같이 나눔니다.
+    </div>
+
+    <h4>✔ 전체 참여 현황</h4>
+    <div class="summary-row">
+      <div class="summary-box"><b>${students.length}명</b>참여 학생</div>
+      <div class="summary-box"><b>${actLogs.length}건</b>누적 실천 활동</div>
+      <div class="summary-box"><b>${totalPts}점</b>누적 온(溫)포인트</div>
+      <div class="summary-box"><b>${jAvg}g</b>급식 잔반 평균</div>
+    </div>
+
+    <h4>✔ 영역별 참여 비율</h4>
+    <div class="cat-grid">
+      <div class="cat-box" style="background:#EAF5EB;border:1.5px solid #7BC87E;"><div style="font-size:10.5px;color:#3D7A4A;font-weight:700;">🌳 자연 탐구</div><div class="cat-val" style="color:#3D7A4A;">${catPct.nature}%</div></div>
+      <div class="cat-box" style="background:#E8F4FB;border:1.5px solid #74B8E0;"><div style="font-size:10.5px;color:#3F8AA6;font-weight:700;">🌱 생명 존중</div><div class="cat-val" style="color:#3F8AA6;">${catPct.life}%</div></div>
+      <div class="cat-box" style="background:#FEF5E7;border:1.5px solid #F5A623;"><div style="font-size:10.5px;color:#E07A3C;font-weight:700;">💛 마음 인성</div><div class="cat-val" style="color:#E07A3C;">${catPct.heart}%</div></div>
+      <div class="cat-box" style="background:#F3EFFC;border:1.5px solid #B39DDB;"><div style="font-size:10.5px;color:#7B59B6;font-weight:700;">🎵 소리 감수성</div><div class="cat-val" style="color:#7B59B6;">${catPct.sound}%</div></div>
+    </div>
+
+    <h4>✔ 우리 아이들이 가장 많이 실천한 활동 TOP 5</h4>
+    <table><thead><tr><th style="width:50px">순위</th><th>활동명</th><th style="width:90px">참여 횟수</th></tr></thead>
+    <tbody>${top5.map(([t,c],i)=>`<tr><td>${i+1}위</td><td>${t}</td><td>${c}회</td></tr>`).join('')}</tbody></table>
+
+    <h4>✔ 냠냠튼튼 초록 빈그릇 (급식 잔반 줄이기)</h4>
+    <div class="intro" style="margin:4px 0 10px;">
+      전체 급식 잔반 측정 <b>${jLogs.length}회</b> 중, 잔반 없이 다 먹은 <b>0g 달성</b>이 <b>${zeroCnt}회(${zeroPct}%)</b>였습니다. 평균 잔반량은 <b>${jAvg}g</b>으로,
+      아이들이 스스로 먹을 만큼만 담아 끝까지 먹는 좋은 습관을 조금씩 길러가고 있습니다.
+    </div>
+
+    <div class="intro">
+      한 학기 동안 아이들은 텃밭을 가꾸고 생태를 관찰하며 자연의 소중함을 몸으로 느꼈고, 형님-동생이 서로를 배려하는 마음 도슨트 활동과 주변 어른께 마음을 전하는 활동을 통해
+      더불어 살아가는 힘을 키워왔습니다. 앞으로 이어질 2학기에도 아이들이 자연을 사랑하고 사람을 배려하는 건강한 마음으로 성장할 수 있도록,
+      가정에서도 잔반 줄이기와 에너지 절약 같은 작은 실천을 함께 격려해 주시면 큰 힘이 되겠습니다. 무더운 여름방학, 가정에 건강과 행복이 가득하시길 바랍니다.
+    </div>
+
+    <div class="footer-sign">
+      <div class="date">${todayStr}</div>
+      <div class="who">남평초등학교장 · 남평초등학교 병설유치원장</div>
+    </div>
+  </div>
+</div></div>
+<script>
+window.addEventListener('load', function(){
+  function fitToPage(){
+    var pad = document.getElementById('printPad');
+    var inner = document.getElementById('letter');
+    var padStyle = getComputedStyle(pad);
+    var padTop = parseFloat(padStyle.paddingTop)||0;
+    var padBottom = parseFloat(padStyle.paddingBottom)||0;
+    var maxH = pad.clientHeight - padTop - padBottom;
+    inner.style.transform = 'none';
+    var actualH = inner.scrollHeight;
+    if(actualH > maxH){
+      var scale = (maxH / actualH) * 0.99;
+      inner.style.transformOrigin = 'top center';
+      inner.style.transform = 'scale(' + scale + ')';
+    }
+  }
+  try{ fitToPage(); }catch(e){}
+  setTimeout(function(){
+    try{ fitToPage(); }catch(e){}
+    window.focus();
+    window.print();
+  }, 250);
+});
+<\/script>
+</body></html>`;
+
+  let iframe = document.getElementById('_homeLetterIframe');
+  if(!iframe){
+    iframe = document.createElement('iframe');
+    iframe.id = '_homeLetterIframe';
+    iframe.style.cssText = 'position:fixed;top:0;left:0;width:210mm;height:297mm;border:none;z-index:-1;visibility:hidden;';
+    document.body.appendChild(iframe);
+  }
+  iframe.srcdoc = html;
 }
 
 async function downloadAllPDFDirect(){
