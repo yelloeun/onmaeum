@@ -4134,7 +4134,10 @@ window.addEventListener('load', function(){
   function fitToPage(){
     var pad = document.getElementById('printPad');
     var inner = document.getElementById('reportPrintArea');
-    var maxH = pad.clientHeight;
+    var padStyle = getComputedStyle(pad);
+    var padTop = parseFloat(padStyle.paddingTop)||0;
+    var padBottom = parseFloat(padStyle.paddingBottom)||0;
+    var maxH = pad.clientHeight - padTop - padBottom; // 패딩(여백)을 뺀 실제 사용 가능한 높이
     inner.style.transform = 'none';
     var actualH = inner.scrollHeight;
     if(actualH > maxH){
