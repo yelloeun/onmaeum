@@ -4069,6 +4069,13 @@ function printReport(){
   const janbanHTML = document.getElementById('reportJanban')?.innerHTML||'';
   const obsHTML    = document.getElementById('reportObserve')?.innerHTML||'';
   const obsTitle   = document.getElementById('reportObserveTitle')?.textContent||'아이의 관찰 기록';
+
+  // 안내장 핵심 내용이 아직 그려지지 않았다면(렌더링 타이밍 문제) 빈 PDF가 나가지 않도록 방지
+  if(!catHTML.trim() || !kediHTML.trim() || !janbanHTML.trim()){
+    alert('안내장 내용이 아직 준비 중이에요. 잠시 후 다시 "PDF로 저장"을 눌러주세요!');
+    return;
+  }
+
   const photoHTML  = reportSelectedPhotos.map(u=>
     `<div><img src="${u}"></div>`
   ).join('');
@@ -4101,8 +4108,8 @@ html,body{
 .grid4{flex:0 0 auto;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:auto auto;gap:6px;}
 .box{background:#f8f8f4;border-radius:8px;padding:9px 11px;border:1px solid #e8e8e0;overflow:hidden;display:flex;flex-direction:column;min-height:0;}
 .box-title{font-size:10px;color:#888;font-weight:700;margin-bottom:5px;flex:0 0 auto;}
-.box-content{flex:1 1 0;min-height:0;display:flex;flex-direction:column;justify-content:flex-start;overflow:hidden;}
-.box-content svg{display:block;width:100%;height:auto;max-height:100%;}
+.box-content{flex:1 1 0;min-height:0;display:flex;flex-direction:column;justify-content:flex-start;overflow:visible;}
+.box-content svg{display:block;width:100%;height:auto;}
 .box-content.obs-box{font-size:10.5px;line-height:1.45;color:#2F3A2E;}
 .comment-box{flex:0 0 auto;border:1px solid #e0e0d8;border-radius:8px;padding:7px 10px;max-height:100px;overflow:hidden;}
 .comment-label{font-size:10px;color:#888;margin-bottom:3px;font-weight:700;}
