@@ -2230,8 +2230,8 @@ function triggerPWAInstall(){
               </div>
 
               <!-- 대표 사진 -->
-              <div style="background:#f8f8f4;border-radius:10px;padding:12px;border:1px solid #e8e8e0;margin-bottom:10px">
-                <div style="font-size:11px;color:#888;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between">
+              <div style="background:#f8f8f4;border-radius:10px;padding:12px;border:1px solid #e8e8e0;margin-bottom:10px" id="reportPhotoBox">
+                <div style="font-size:11px;color:#888;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between" id="reportPhotoUploadRow">
                   <span style="font-weight:700">📸 온마음 활동에 이렇게 참여했어요</span>
                   <label style="display:flex;align-items:center;gap:4px;background:#EEF6E8;border:1.5px solid var(--accent);border-radius:999px;padding:4px 12px;cursor:pointer;font-size:11px;font-weight:700;color:var(--accent);white-space:nowrap">
                     <input type="file" accept="image/*" multiple id="reportLocalPhotoInput"
@@ -2242,7 +2242,7 @@ function triggerPWAInstall(){
                 <!-- 선택된 사진 미리보기 -->
                 <div id="reportPhotoSelected" style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:8px"></div>
                 <!-- 갤러리 사진 전체 -->
-                <div style="font-size:10px;color:#aaa;margin-bottom:5px">갤러리에서 클릭해서 선택 (선택된 사진은 초록 테두리)</div>
+                <div style="font-size:10px;color:#aaa;margin-bottom:5px" id="reportGalleryHint">갤러리에서 클릭해서 선택 (선택된 사진은 초록 테두리)</div>
                 <div id="reportPhotoPick" style="display:flex;gap:6px;flex-wrap:wrap"></div>
               </div>
             </div>
@@ -4064,69 +4064,54 @@ function printReport(){
   const s = students.find(x=>x.id===reportStudent);
   if(!s) return;
 
-  const catHTML    = document.getElementById('reportCatBars')?.innerHTML||'';
-  const kediHTML   = document.getElementById('reportKediBars')?.innerHTML||'';
-  const janbanHTML = document.getElementById('reportJanban')?.innerHTML||'';
-  const obsHTML    = document.getElementById('reportObserve')?.innerHTML||'';
-  const obsTitle   = document.getElementById('reportObserveTitle')?.textContent||'아이의 관찰 기록';
-  const photoHTML  = reportSelectedPhotos.map(u=>
-    `<div style="aspect-ratio:1;border-radius:8px;overflow:hidden;"><img src="${u}" style="width:100%;height:100%;object-fit:cover;display:block;"></div>`
-  ).join('');
-  const headerUrl = 'https://res.cloudinary.com/dukzrwvx6/image/upload/f_auto,q_auto/%EC%A7%80%EA%B5%AC_%EC%98%A8_On_%EB%8F%84_%EB%82%AE%EC%B6%94%EB%8A%94_%EC%98%A8_%E6%BA%AB_%EB%A7%88%EC%9D%8C_qwmzrr.png';
-  const safeComment = comment.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const src = document.getElementById('reportPrintArea');
+  if(!src) return;
+  const clone = src.cloneNode(true);
 
-  // 현재 앱의 모든 CSS 변수 수집
+  // 편집 전용 UI 제거 (다시생성 버튼 / 사진 업로드+갤러리 선택 컨트롤)
+  clone.querySelector('#regenBtn')?.remove();
+  clone.querySelector('#reportPhotoUploadRow')?.remove();
+  clone.querySelector('#reportGalleryHint')?.remove();
+  clone.querySelector('#reportPhotoPick')?.remove();
+
+  // 선택된 대표 사진이 하나도 없으면 사진 박스 자체를 숨김
+  const photoBox = clone.querySelector('#reportPhotoBox');
+  const photoSel = clone.querySelector('#reportPhotoSelected');
+  if(photoBox && photoSel && photoSel.children.length===0) photoBox.remove();
+
+  // 코멘트 textarea → 줄바꿈이 유지되는 고정 텍스트로 교체
+  const safeComment = comment.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const ta = clone.querySelector('#reportComment');
+  if(ta){
+    const div = document.createElement('div');
+    div.style.cssText = 'width:100%;font-family:inherit;font-size:13px;line-height:1.8;color:#2F3A2E;white-space:pre-wrap;';
+    div.innerHTML = safeComment;
+    ta.replaceWith(div);
+  }
+
+  // 현재 앱의 CSS 변수 수집 (인라인 style의 var(--line) 등 해석용)
   const rootStyle = getComputedStyle(document.documentElement);
   const cssVars = ['--bg','--ink','--ink-soft','--accent','--accent-2','--warm','--sky','--paper','--line','--green','--yellow','--orange','--red']
     .map(v=>`${v}:${rootStyle.getPropertyValue(v).trim()}`)
     .join(';');
 
+  // 화면 미리보기(#reportPrintArea)를 그대로 복제해 출력 — 화면과 인쇄 결과가 100% 동일
   const html = `<!DOCTYPE html><html><head>
 <meta charset="UTF-8">
 <style>
 :root{${cssVars};}
-*{box-sizing:border-box;margin:0;padding:0;}
+*{box-sizing:border-box;}
 @page{size:A4 portrait;margin:0;}
 html,body{
+  margin:0;padding:14mm 12mm;
   font-family:'Malgun Gothic','맑은 고딕',sans-serif;
-  width:210mm;height:297mm;background:#fff;
-  font-size:10px;overflow:hidden;
+  background:#fff;
   -webkit-print-color-adjust:exact;print-color-adjust:exact;
 }
-.wrap{height:297mm;display:flex;flex-direction:column;padding:6mm 8mm;gap:6px;}
-.header-img img{width:100%;display:block;border-radius:4px;}
-.title{text-align:center;font-size:28px;font-weight:900;color:#3B6D11;letter-spacing:-1px;line-height:1.15;white-space:nowrap;padding:4px 0 6px;border-bottom:1.5px solid #e0e0d8;}
-.grid4{flex:1 1 0;min-height:0;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:6px;}
-.box{background:#f8f8f4;border-radius:8px;padding:9px 11px;border:1px solid #e8e8e0;overflow:hidden;display:flex;flex-direction:column;min-height:0;}
-.box-title{font-size:10px;color:#888;font-weight:700;margin-bottom:6px;flex:0 0 auto;}
-.box-content{flex:1 1 0;min-height:0;display:flex;flex-direction:column;justify-content:center;overflow:hidden;}
-.box-content svg{display:block;width:100%;height:auto;max-height:100%;}
-.box-content.obs-box{justify-content:flex-start;font-size:11px;line-height:1.6;color:#2F3A2E;}
-.comment-box{border:1px solid #e0e0d8;border-radius:8px;padding:7px 10px;flex:0 0 auto;}
-.comment-label{font-size:10px;color:#888;margin-bottom:3px;font-weight:700;}
-.comment-text{font-size:11px;line-height:1.75;color:#2F3A2E;white-space:pre-wrap;}
-.photo-wrap{border-radius:8px;padding:6px 9px;border:1px solid #e8e8e0;background:#f8f8f4;flex:0 0 auto;}
-.photo-label{font-size:10.5px;color:#555;font-weight:700;margin-bottom:4px;}
-.photo-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;}
-.photo-grid div{aspect-ratio:1;border-radius:6px;overflow:hidden;}
-.photo-grid img{width:100%;height:100%;object-fit:cover;display:block;}
+#reportPrintArea{max-width:100% !important;}
 </style>
 </head><body>
-<div class="wrap">
-  <div class="header-img"><img src="${headerUrl}" onerror="this.style.display='none'"></div>
-  <div class="title">2026학년도 남평행복프로젝트 온(溫)마음(音) 1학기 성장 안내장</div>
-  <div class="grid4">
-    <div class="box"><div class="box-title">활동 영역별 참여</div><div class="box-content">${catHTML}</div></div>
-    <div class="box"><div class="box-title">인성검사 성장</div><div class="box-content">${kediHTML}</div></div>
-    <div class="box"><div class="box-title">🥣 냠냠튼튼 초록 빈그릇 급식 잔반 기록</div><div class="box-content">${janbanHTML}</div></div>
-    <div class="box"><div class="box-title">✏️ ${obsTitle}</div><div class="box-content obs-box">${obsHTML}</div></div>
-  </div>
-  <div class="comment-box">
-    <div class="comment-label">남평행복프로젝트 활동을 통해서...</div>
-    <div class="comment-text">${safeComment}</div>
-  </div>
-  ${photoHTML?`<div class="photo-wrap"><div class="photo-label">📸 온마음 활동에 이렇게 참여했어요</div><div class="photo-grid">${photoHTML}</div></div>`:''}
-</div>
+${clone.outerHTML}
 </body></html>`;
 
   // iframe을 사용한 인쇄 — 날짜/URL 헤더 없음, 팝업 차단 없음
@@ -5312,8 +5297,18 @@ async function downloadAllPDFDirect(){
     pts:actLogs2.filter(l=>l.studentId===s.id).reduce((a,b)=>a+(b.points||0),0)
   })).sort((a,b)=>b.pts-a.pts);
 
-  const obsSamples=observationLogs.slice(-6).map(o=>o.discover||o.text||'').filter(Boolean).join(' / ');
-  const teacherSamples=teacherObsLogs.slice(-4).map(o=>o.content||'').filter(Boolean).join(' / ');
+  const obsEntries = observationLogs
+    .map(o=>({ date:o.date, studentId:o.studentId, text:(o.discover||o.text||'').trim() }))
+    .filter(o=>o.text)
+    .slice(-8)
+    .reverse();
+  const teacherEntries = teacherObsLogs
+    .map(o=>({ date:o.date, content:(o.content||'').trim() }))
+    .filter(o=>o.content)
+    .slice(-8)
+    .reverse();
+  const fmtDate = d => (d instanceof Date && !isNaN(d)) ? `${d.getFullYear()}.${d.getMonth()+1}.${d.getDate()}` : '';
+  const stuEmoji = sid => students.find(x=>x.id===sid)?.emoji || '';
 
   // 학생별 순위 표
   const rankRows=sPts2.map((s,i)=>`<tr><td>${i+1}위</td><td>${s.emoji} ${s.id}</td><td>${s.pts}점</td></tr>`).join('');
@@ -5378,8 +5373,9 @@ async function downloadAllPDFDirect(){
   const html=`<!DOCTYPE html><html><head><meta charset="UTF-8">
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
-@page{margin:15mm 12mm;}
-body{font-family:'Malgun Gothic','맑은 고딕',sans-serif;font-size:11px;color:#2F3A2E;line-height:1.6;}
+@page{margin:0;}
+html,body{background:#fff;}
+body{font-family:'Malgun Gothic','맑은 고딕',sans-serif;font-size:11px;color:#2F3A2E;line-height:1.6;padding:14mm 12mm;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
 h1{font-size:20px;color:#3B6D11;margin-bottom:4px;}
 h2{font-size:14px;color:#3B6D11;border-bottom:2px solid #3B6D11;padding-bottom:4px;margin:16px 0 8px;}
 h3{font-size:12px;color:#555;margin:10px 0 5px;}
@@ -5401,6 +5397,9 @@ tr:nth-child(even){background:#f8f8f4;}
 .chart-title{font-size:11px;color:#3B6D11;font-weight:700;margin-bottom:6px;}
 .chart-wide{background:#f8f8f4;border-radius:8px;padding:10px;border:1px solid #e8e8e0;text-align:center;margin-bottom:12px;page-break-inside:avoid;}
 .chart-wide img{width:100%;height:auto;display:block;}
+.obs-table td.obs-date{width:80px;color:#888;font-size:10px;white-space:nowrap;}
+.obs-table td.obs-who{width:60px;font-weight:700;white-space:nowrap;}
+.obs-table td.obs-text{line-height:1.7;}
 footer{margin-top:20px;font-size:9px;color:#aaa;text-align:center;}
 </style>
 </head><body>
@@ -5463,8 +5462,12 @@ ${imgTrend?`<div class="chart-wide"><div class="chart-title">월별 활동 추�
 <tr style="font-weight:700;"><td colspan="2">총 측정</td><td>${jLogs2.length}회</td><td>평균 ${jAvg2}g</td></tr>
 </tbody></table>
 
-${obsSamples?`<h2>✏️ 아이들의 관찰 기록</h2><div style="background:#f8f8f4;border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:11px;line-height:1.8;">${obsSamples}</div>`:''}
-${teacherSamples?`<h2>👩‍🏫 교사 관찰 기록</h2><div style="background:#f0ece4;border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:11px;line-height:1.8;">${teacherSamples}</div>`:''}
+${obsEntries.length?`<h2>✏️ 아이들의 관찰 기록</h2>
+<table class="obs-table"><thead><tr><th style="width:80px">날짜</th><th style="width:60px">이름</th><th>내용</th></tr></thead>
+<tbody>${obsEntries.map(o=>`<tr><td class="obs-date">${fmtDate(o.date)}</td><td class="obs-who">${stuEmoji(o.studentId)} ${o.studentId}</td><td class="obs-text">${o.text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</td></tr>`).join('')}</tbody></table>`:''}
+${teacherEntries.length?`<h2>👩‍🏫 교사 관찰 기록</h2>
+<table class="obs-table"><thead><tr><th style="width:80px">날짜</th><th>내용</th></tr></thead>
+<tbody>${teacherEntries.map(o=>`<tr><td class="obs-date">${fmtDate(o.date)}</td><td class="obs-text">${o.content.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</td></tr>`).join('')}</tbody></table>`:''}
 
 <h2>📝 종합 총평</h2>
 <div class="comment-label">종합 총평을 생성 중이에요...</div>
@@ -5473,34 +5476,43 @@ ${teacherSamples?`<h2>👩‍🏫 교사 관찰 기록</h2><div style="backgroun
 <footer>남평 온(溫)마음(音) 정원 · 남평초등학교 병설유치원 · ${new Date().toLocaleDateString('ko-KR')} 출력</footer>
 </body></html>`;
 
-  // 총평 생성 (더 상세하고 구체적으로) 후 iframe 인쇄
+  // 총평 생성 (분량 3배 상세) 후 iframe 인쇄
   let commentTxt = `이번 1학기 동안 ${students.length}명의 학생들이 남평행복프로젝트에 성실히 참여하였으며, 영역별로는 ${catStr}의 비율로 활동이 이루어졌습니다. 잔반 평균 ${jAvg2}g을 달성하며 올바른 식습관도 함께 기르고 있습니다.`;
   try {
     const topStu = sPts2.slice(0,3).map(s=>`${s.emoji}${s.id}(${s.pts}점)`).join(', ');
+    const obsText = obsEntries.map(o=>`- ${o.studentId}: "${o.text}"`).join('\n') || '없음';
+    const teacherText = teacherEntries.map(o=>`- "${o.content}"`).join('\n') || '없음';
     const resp = await fetch('https://api.anthropic.com/v1/messages',{
       method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({model:'claude-sonnet-4-6', max_tokens:1400,
-        messages:[{role:'user',content:`남평행복프로젝트 온(溫)마음(音) 1학기 전체 데이터를 심층 분석해서, 유치원 교사가 학부모·원 운영진에게 공유할 수 있는 종합 총평을 작성해주세요.
+      body: JSON.stringify({model:'claude-sonnet-4-6', max_tokens:3200,
+        messages:[{role:'user',content:`남평행복프로젝트 온(溫)마음(音) 1학기 전체 데이터를 심층 분석해서, 유치원 교사가 학부모·원 운영진에게 공유할 수 있는 매우 상세한 종합 총평을 작성해주세요. 기존보다 3배 더 깊이 있고 길게 써주세요.
 
 [데이터]
 - 전체 ${students.length}명, 누적 활동 ${actLogs2.length}건, 총 획득 ${totalPts2}점, 잔반 평균 ${jAvg2}g (0g 달성률 ${Math.round(zeroCnt/Math.max(jLogs2.length,1)*100)}%)
 - 영역별 참여 비율: ${catStr}
-- 인기 활동 TOP5: ${topA}
+- 인기 활동 TOP10: ${top10.map(([t,c])=>`${t}(${c}회)`).join(', ')}
 - 누적 점수 상위 3명: ${topStu}
 - 월별(5~10월) 총점 추이: ${monthTotals.join(', ')}
 - 월별(5~10월) 활동 건수 추이: ${monthCounts.join(', ')}
-- 아이들 관찰기록 발췌: "${obsSamples}"
-- 교사 관찰기록 발췌: "${teacherSamples}"
 
-[작성 조건]
-1. 분량은 10~12문장, 500자 이상으로 충분히 상세하게 작성할 것.
-2. 첫 문단: 전체 참여 규모와 영역별 참여 비율(자연탐구/생명존중/마음인성/소리감수성)을 각각 %와 함께 구체적으로 짚어줄 것.
-3. 둘째 문단: 자연 탐구·생명 존중 활동에서 길러진 생명 감수성과 탐구심, 마음 인성 활동(형님-동생 마음 도슨트, 주변 어른께 전하는 초록 마음 등)에서 드러난 배려·공감·협력의 태도를 구체적 사례처럼 서술할 것.
-4. 셋째 문단: 관찰기록과 교사 관찰기록에서 드러난 아이들의 실제 성장 모습(구체적 행동 변화, 또래 관계, 정서 표현 등)을 자연스럽게 녹여 서술할 것.
-5. 넷째 문단: 잔반 기록을 통한 식습관 개선(0g 달성률 포함), 월별 참여 추이에서 보이는 변화(활동이 늘었는지, 꾸준했는지)를 언급할 것.
-6. 마지막 문단: 2학기를 향한 기대와 지도 방향을 따뜻하게 제안하며 마무리할 것.
-7. "AI", "인공지능", "챗봇" 등의 표현은 절대 사용하지 말 것.
-8. 유치원 교사의 시선에서 따뜻하면서도 전문적인 교육 분석 문체로 작성할 것. 문단과 문단 사이에는 줄바꿈을 넣을 것.`}]
+[아이들 관찰기록 (학생명 포함, 낱개)]
+${obsText}
+
+[교사 관찰기록 (낱개)]
+${teacherText}
+
+[작성 조건 — 분량을 반드시 지킬 것]
+1. 전체 분량은 20~24문장, 1400~1800자 이상으로 매우 상세하게 작성할 것 (기존 500자 수준의 3배 이상 분량).
+2. 총 6~7개 문단으로 구성하고 문단 사이에는 줄바꿈을 넣을 것.
+3. 1문단: 전체 참여 규모, 누적 활동 건수·점수를 짚고 영역별 참여 비율(자연탐구/생명존중/마음인성/소리감수성)을 각각 %와 함께 구체적으로 설명할 것.
+4. 2문단: 인기 활동 TOP10 중 상위 활동들을 구체적으로 언급하며 그 활동이 아이들에게 어떤 실천적 습관(에너지 절약, 자원 재활용, 생명 돌봄 등)을 길러주었는지 서술할 것.
+5. 3문단: 자연 탐구·생명 존중 활동에서 길러진 생명 감수성과 탐구심을 구체적 활동명과 연결해 서술할 것.
+6. 4문단: 마음 인성 활동(형님-동생 마음 도슨트, 주변 어른께 전하는 초록 마음 등)에서 드러난 배려·공감·협력의 태도를 서술할 것.
+7. 5문단: 위에 제시된 아이들 관찰기록과 교사 관찰기록의 내용을 각각 구체적으로 (학생 이름을 언급하며) 최소 3가지 이상 사례로 풀어 서술하여, 아이들의 실제 성장 모습과 행동 변화, 또래 관계, 정서 표현을 생생하게 전달할 것.
+8. 6문단: 잔반 기록을 통한 식습관 개선(0g 달성률 및 구체적 수치 포함)과 월별 참여 추이(어느 달에 가장 활발했는지, 어떻게 변화했는지)를 데이터에 기반해 분석할 것.
+9. 7문단: 2학기를 향한 기대와 구체적인 지도 방향을 따뜻하게 제안하며 마무리할 것.
+10. "AI", "인공지능", "챗봇" 등의 표현은 절대 사용하지 말 것.
+11. 유치원 교사의 시선에서 따뜻하면서도 전문적인 교육 분석 문체로 작성할 것.`}]
       })
     });
     const data = await resp.json();
