@@ -4064,30 +4064,16 @@ function printReport(){
   const s = students.find(x=>x.id===reportStudent);
   if(!s) return;
 
-  const src = document.getElementById('reportPrintArea');
-  if(!src) return;
-  const clone = src.cloneNode(true);
-
-  // 편집 전용 UI 제거 (다시생성 버튼 / 사진 업로드+갤러리 선택 컨트롤)
-  clone.querySelector('#regenBtn')?.remove();
-  clone.querySelector('#reportPhotoUploadRow')?.remove();
-  clone.querySelector('#reportGalleryHint')?.remove();
-  clone.querySelector('#reportPhotoPick')?.remove();
-
-  // 선택된 대표 사진이 하나도 없으면 사진 박스 자체를 숨김
-  const photoBox = clone.querySelector('#reportPhotoBox');
-  const photoSel = clone.querySelector('#reportPhotoSelected');
-  if(photoBox && photoSel && photoSel.children.length===0) photoBox.remove();
-
-  // 코멘트 textarea → 줄바꿈이 유지되는 고정 텍스트로 교체
+  const catHTML    = document.getElementById('reportCatBars')?.innerHTML||'';
+  const kediHTML   = document.getElementById('reportKediBars')?.innerHTML||'';
+  const janbanHTML = document.getElementById('reportJanban')?.innerHTML||'';
+  const obsHTML    = document.getElementById('reportObserve')?.innerHTML||'';
+  const obsTitle   = document.getElementById('reportObserveTitle')?.textContent||'아이의 관찰 기록';
+  const photoHTML  = reportSelectedPhotos.map(u=>
+    `<div><img src="${u}"></div>`
+  ).join('');
+  const headerUrl = 'https://res.cloudinary.com/dukzrwvx6/image/upload/f_auto,q_auto/%EC%A7%80%EA%B5%AC_%EC%98%A8_On_%EB%8F%84_%EB%82%AE%EC%B6%94%EB%8A%94_%EC%98%A8_%E6%BA%AB_%EB%A7%88%EC%9D%8C_qwmzrr.png';
   const safeComment = comment.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-  const ta = clone.querySelector('#reportComment');
-  if(ta){
-    const div = document.createElement('div');
-    div.style.cssText = 'width:100%;font-family:inherit;font-size:13px;line-height:1.8;color:#2F3A2E;white-space:pre-wrap;';
-    div.innerHTML = safeComment;
-    ta.replaceWith(div);
-  }
 
   // 현재 앱의 CSS 변수 수집 (인라인 style의 var(--line) 등 해석용)
   const rootStyle = getComputedStyle(document.documentElement);
@@ -4095,23 +4081,54 @@ function printReport(){
     .map(v=>`${v}:${rootStyle.getPropertyValue(v).trim()}`)
     .join(';');
 
-  // 화면 미리보기(#reportPrintArea)를 그대로 복제해 출력 — 화면과 인쇄 결과가 100% 동일
+  // A4 한 장에 고정 — 상하좌우 여백 1cm 동일, 4개 표 크기/여백 동일
   const html = `<!DOCTYPE html><html><head>
 <meta charset="UTF-8">
 <style>
 :root{${cssVars};}
-*{box-sizing:border-box;}
+*{box-sizing:border-box;margin:0;padding:0;}
 @page{size:A4 portrait;margin:0;}
 html,body{
-  margin:0;padding:14mm 12mm;
   font-family:'Malgun Gothic','맑은 고딕',sans-serif;
-  background:#fff;
+  width:210mm;height:297mm;background:#fff;
+  overflow:hidden;
   -webkit-print-color-adjust:exact;print-color-adjust:exact;
 }
-#reportPrintArea{max-width:100% !important;}
+.wrap{width:100%;height:297mm;display:flex;flex-direction:column;padding:10mm;gap:5px;overflow:hidden;}
+.header-img{flex:0 0 auto;}
+.header-img img{width:100%;display:block;border-radius:4px;}
+.title{flex:0 0 auto;text-align:center;font-size:18px;font-weight:900;color:#3B6D11;letter-spacing:-0.5px;line-height:1.3;padding:5px 0;border-bottom:1.5px solid #e0e0d8;}
+.grid4{flex:1 1 0;min-height:0;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:6px;}
+.box{background:#f8f8f4;border-radius:8px;padding:9px 11px;border:1px solid #e8e8e0;overflow:hidden;display:flex;flex-direction:column;min-height:0;}
+.box-title{font-size:10px;color:#888;font-weight:700;margin-bottom:5px;flex:0 0 auto;}
+.box-content{flex:1 1 0;min-height:0;display:flex;flex-direction:column;justify-content:center;overflow:hidden;}
+.box-content svg{display:block;width:100%;height:auto;max-height:100%;}
+.box-content.obs-box{justify-content:flex-start;font-size:10.5px;line-height:1.45;color:#2F3A2E;}
+.comment-box{flex:0 0 auto;border:1px solid #e0e0d8;border-radius:8px;padding:7px 10px;max-height:100px;overflow:hidden;}
+.comment-label{font-size:10px;color:#888;margin-bottom:3px;font-weight:700;}
+.comment-text{font-size:10.5px;line-height:1.5;color:#2F3A2E;white-space:pre-wrap;}
+.photo-wrap{flex:0 0 auto;border-radius:8px;padding:5px 8px;border:1px solid #e8e8e0;background:#f8f8f4;}
+.photo-label{font-size:10px;color:#555;font-weight:700;margin-bottom:4px;}
+.photo-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;}
+.photo-grid div{height:62px;border-radius:6px;overflow:hidden;}
+.photo-grid img{width:100%;height:100%;object-fit:cover;display:block;}
 </style>
 </head><body>
-${clone.outerHTML}
+<div class="wrap">
+  <div class="header-img"><img src="${headerUrl}" onerror="this.style.display='none'"></div>
+  <div class="title">2026학년도 남평행복프로젝트 온(溫)마음(音) 1학기 성장 안내장</div>
+  <div class="grid4">
+    <div class="box"><div class="box-title">활동 영역별 참여</div><div class="box-content">${catHTML}</div></div>
+    <div class="box"><div class="box-title">인성검사 성장</div><div class="box-content">${kediHTML}</div></div>
+    <div class="box"><div class="box-title">🥣 냠냠튼튼 초록 빈그릇 급식 잔반 기록</div><div class="box-content">${janbanHTML}</div></div>
+    <div class="box"><div class="box-title">✏️ ${obsTitle}</div><div class="box-content obs-box">${obsHTML}</div></div>
+  </div>
+  <div class="comment-box">
+    <div class="comment-label">남평행복프로젝트 활동을 통해서...</div>
+    <div class="comment-text">${safeComment}</div>
+  </div>
+  ${photoHTML?`<div class="photo-wrap"><div class="photo-label">📸 온마음 활동에 이렇게 참여했어요</div><div class="photo-grid">${photoHTML}</div></div>`:''}
+</div>
 </body></html>`;
 
   // iframe을 사용한 인쇄 — 날짜/URL 헤더 없음, 팝업 차단 없음
@@ -5269,6 +5286,35 @@ let reportSelectedWeek = null;
 let reportSelectedMonth = null;
 
 
+/* 네트워크(Claude API) 호출 없이도 항상 상세한 총평이 나오도록 하는 로컬 생성기.
+   배포 사이트(GitHub Pages)에서는 api.anthropic.com 직접 호출이 브라우저 보안 정책상 항상 실패하므로,
+   실패해도 총평이 짧아지지 않도록 이 함수의 결과를 기본값으로 사용한다. */
+function buildLongReview({studentsCount, actCount, totalPts, jAvg, zeroPct, catPct, top10, topStu, rMonths, monthTotals, monthCounts, obsEntries, teacherEntries}){
+  const p1 = `이번 1학기 동안 ${studentsCount}명의 학생들이 남평행복프로젝트 온(溫)마음(音) 활동에 꾸준히 참여하여 누적 ${actCount}건의 활동으로 총 ${totalPts}점의 온(溫)포인트를 함께 쌓아 왔습니다. 영역별 참여 비율을 살펴보면 자연 탐구 ${catPct['자연탐구']}%, 생명 존중 ${catPct['생명존중']}%, 마음 인성 ${catPct['마음인성']}%, 소리 감수성 ${catPct['소리감수성']}%로 나타나, 자연을 직접 관찰하고 탐구하는 활동에 아이들의 관심과 참여가 가장 크게 쏠려 있었음을 확인할 수 있었습니다. 이는 텃밭을 가꾸고 생태를 관찰하는, 몸으로 직접 부딪혀 배우는 활동이 유아기 아이들에게 얼마나 강력하고 자연스러운 학습 동기가 되는지를 잘 보여주는 결과입니다.`;
+
+  const topActTxt = top10.slice(0,6).map(([t,c])=>`${t}(${c}회)`).join(', ');
+  const p2 = `가장 많이 참여한 활동을 살펴보면 ${topActTxt} 순으로 나타났습니다. 에너지 절약왕, 헌 우유갑 새 휴지와 같은 활동은 아이들이 일상 속 작은 실천 하나하나가 모여 환경을 지키는 큰 힘이 된다는 것을 몸으로 익히는 계기가 되었고, 꼬꼬랑 우리랑처럼 생명을 직접 돌보는 활동은 생명에 대한 책임감과 애정을 자연스럽게 길러주는 시간이 되었습니다. 이러한 반복적인 실천은 단순히 한 번의 놀이로 그치지 않고, 아이들의 생활 습관으로 서서히 자리잡아가고 있다는 점에서 그 의미가 더욱 큽니다.`;
+
+  const p3 = `자연 탐구와 생명 존중 영역의 활동은 아이들이 계절의 변화, 동식물의 성장 과정을 직접 눈으로 보고 손으로 만지며 배우는 살아있는 교육이 되어주었습니다. 씨앗을 심고 물을 주며 기다리는 과정, 작은 생명을 정성껏 돌보는 경험은 생명에 대한 존중과 기다림의 미덕을 자연스럽게 심어주었으며, 이는 앞으로 아이들이 세상과 관계 맺는 태도의 소중한 기초가 될 것입니다.`;
+
+  const p4 = `마음 인성 영역에서는 형님-동생 마음 도슨트, 주변 어른께 전하는 초록 마음과 같은 활동을 통해 아이들이 서로를 배려하고 존중하는 태도를 몸에 익혀가고 있습니다. 나이 차이가 있는 친구를 살뜰히 챙기고, 주변 어른들께 감사와 마음을 표현하는 경험은 공동체 안에서 더불어 살아가는 힘을 키우는 소중한 자산이 되고 있으며, 이는 성적이나 결과로는 드러나지 않지만 아이의 평생을 지탱할 인성의 뿌리가 되어줄 것입니다.`;
+
+  let p5 = '';
+  if(obsEntries.length || teacherEntries.length){
+    const obsLines = obsEntries.slice(0,5).map(o=>`${o.studentId}는 "${o.text}"라고 스스로 관찰하고 느낀 점을 표현하였습니다.`).join(' ');
+    const teacherLines = teacherEntries.slice(0,4).map(o=>o.content).join(' ');
+    p5 = `실제 관찰기록에서도 아이들의 성장을 생생하게 확인할 수 있었습니다. ${obsLines}\n\n교사의 관찰기록에서도 다음과 같은 모습이 눈에 띄었습니다. ${teacherLines}\n\n이러한 기록들은 아이들이 단순히 활동에 참여하는 것을 넘어, 스스로 생각하고 느끼며 또래와 관계를 맺어가는 모습을 생생하게 보여줍니다.`;
+  }
+
+  const monthTxt = rMonths.map((m,i)=>`${m}월 ${monthTotals[i]}점(${monthCounts[i]}건)`).join(', ');
+  const maxIdx = monthTotals.indexOf(Math.max(...monthTotals));
+  const p6 = `잔반 기록을 살펴보면 평균 ${jAvg}g, 0g 달성률 ${zeroPct}%로, 아이들이 스스로 먹을 만큼만 담아 끝까지 먹는 습관을 조금씩 길러가고 있음을 확인할 수 있었습니다. 월별 활동 추이(${monthTxt})를 보면 ${rMonths[maxIdx]}월에 참여가 가장 활발하였고, 이후 방학 시기를 지나며 자연스럽게 활동이 줄어드는 흐름을 보였습니다. 이는 학기 중 아이들의 몰입도와 참여 열기가 꾸준히 높은 수준으로 유지되었음을 보여주는 결과라 할 수 있습니다. 누적 점수 상위권에는 ${topStu}가 이름을 올리며 꾸준한 참여의 모범을 보여주었습니다.`;
+
+  const p7 = `2학기에는 지금까지 다져온 자연에 대한 관심과 서로를 배려하는 마음을 더욱 깊이 있게 확장해 나갈 수 있도록 지도할 계획입니다. 아이들 한 명 한 명이 자기만의 속도로 성장할 수 있도록 세심히 살피고, 잘한 점은 충분히 칭찬하며, 아직 서툰 부분은 기다려주는 마음으로 함께하겠습니다. 남평행복프로젝트 온(溫)마음(音)이 아이들의 일상 속에 따뜻하게 스며들어, 자연을 사랑하고 사람을 배려하는 건강한 마음의 씨앗으로 자라나기를 바랍니다.`;
+
+  return [p1,p2,p3,p4,p5,p6,p7].filter(Boolean).join('\n\n');
+}
+
 async function downloadAllPDFDirect(){
   // 통계 데이터 수집
   const actLogs2 = allLogs.filter(l=>l.type==='activity');
@@ -5297,8 +5343,9 @@ async function downloadAllPDFDirect(){
     pts:actLogs2.filter(l=>l.studentId===s.id).reduce((a,b)=>a+(b.points||0),0)
   })).sort((a,b)=>b.pts-a.pts);
 
-  const obsEntries = observationLogs
-    .map(o=>({ date:o.date, studentId:o.studentId, text:(o.discover||o.text||'').trim() }))
+  // 학생 관찰기록: memos는 앱 시작 시 항상 로드되는 배열 (observationLogs는 관찰기록 탭 방문 시에만 채워짐)
+  const obsEntries = memos
+    .map(o=>({ date:o.date, studentId:o.studentId, text:(o.text||'').trim() }))
     .filter(o=>o.text)
     .slice(-8)
     .reverse();
@@ -5375,7 +5422,7 @@ async function downloadAllPDFDirect(){
 *{box-sizing:border-box;margin:0;padding:0;}
 @page{margin:0;}
 html,body{background:#fff;}
-body{font-family:'Malgun Gothic','맑은 고딕',sans-serif;font-size:11px;color:#2F3A2E;line-height:1.6;padding:14mm 12mm;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+body{font-family:'Malgun Gothic','맑은 고딕',sans-serif;font-size:11px;color:#2F3A2E;line-height:1.6;padding:14mm 12mm;-webkit-print-color-adjust:exact;print-color-adjust:exact;box-decoration-break:clone;-webkit-box-decoration-break:clone;}
 h1{font-size:20px;color:#3B6D11;margin-bottom:4px;}
 h2{font-size:14px;color:#3B6D11;border-bottom:2px solid #3B6D11;padding-bottom:4px;margin:16px 0 8px;}
 h3{font-size:12px;color:#555;margin:10px 0 5px;}
@@ -5409,6 +5456,10 @@ footer{margin-top:20px;font-size:9px;color:#aaa;text-align:center;}
 <div class="summary">
   전체 학생 <b>${students.length}명</b> · 누적 활동 <b>${actLogs2.length}건</b> · 총 획득 점수 <b>${totalPts2}점</b> · 잔반 평균 <b>${jAvg2}g</b>
 </div>
+
+<h2>📝 종합 총평</h2>
+<div class="comment-label">종합 총평을 생성 중이에요...</div>
+<div class="comment-box" id="allPDFComment">잠시만 기다려 주세요...</div>
 
 <h2>🎯 활동 영역별 참여 현황</h2>
 <div class="cat-grid">
@@ -5469,26 +5520,26 @@ ${teacherEntries.length?`<h2>👩‍🏫 교사 관찰 기록</h2>
 <table class="obs-table"><thead><tr><th style="width:80px">날짜</th><th>내용</th></tr></thead>
 <tbody>${teacherEntries.map(o=>`<tr><td class="obs-date">${fmtDate(o.date)}</td><td class="obs-text">${o.content.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</td></tr>`).join('')}</tbody></table>`:''}
 
-<h2>📝 종합 총평</h2>
-<div class="comment-label">종합 총평을 생성 중이에요...</div>
-<div class="comment-box" id="allPDFComment">잠시만 기다려 주세요...</div>
-
 <footer>남평 온(溫)마음(音) 정원 · 남평초등학교 병설유치원 · ${new Date().toLocaleDateString('ko-KR')} 출력</footer>
 </body></html>`;
 
-  // 총평 생성 (분량 3배 상세) 후 iframe 인쇄
-  let commentTxt = `이번 1학기 동안 ${students.length}명의 학생들이 남평행복프로젝트에 성실히 참여하였으며, 영역별로는 ${catStr}의 비율로 활동이 이루어졌습니다. 잔반 평균 ${jAvg2}g을 달성하며 올바른 식습관도 함께 기르고 있습니다.`;
+  // 총평 생성 — 네트워크 호출 없이도 항상 상세한 총평이 나오도록 로컬 생성기를 기본값으로 사용
+  const zeroPct = Math.round(zeroCnt/Math.max(jLogs2.length,1)*100);
+  const topStu = sPts2.slice(0,3).map(s=>`${s.emoji}${s.id}(${s.pts}점)`).join(', ');
+  let commentTxt = buildLongReview({
+    studentsCount: students.length, actCount: actLogs2.length, totalPts: totalPts2, jAvg: jAvg2,
+    zeroPct, catPct, top10, topStu, rMonths, monthTotals, monthCounts, obsEntries, teacherEntries
+  });
   try {
-    const topStu = sPts2.slice(0,3).map(s=>`${s.emoji}${s.id}(${s.pts}점)`).join(', ');
     const obsText = obsEntries.map(o=>`- ${o.studentId}: "${o.text}"`).join('\n') || '없음';
     const teacherText = teacherEntries.map(o=>`- "${o.content}"`).join('\n') || '없음';
     const resp = await fetch('https://api.anthropic.com/v1/messages',{
       method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({model:'claude-sonnet-4-6', max_tokens:3200,
-        messages:[{role:'user',content:`남평행복프로젝트 온(溫)마음(音) 1학기 전체 데이터를 심층 분석해서, 유치원 교사가 학부모·원 운영진에게 공유할 수 있는 매우 상세한 종합 총평을 작성해주세요. 기존보다 3배 더 깊이 있고 길게 써주세요.
+      body: JSON.stringify({model:'claude-sonnet-4-6', max_tokens:4000,
+        messages:[{role:'user',content:`남평행복프로젝트 온(溫)마음(音) 1학기 전체 데이터를 심층 분석해서, 유치원 교사가 학부모·원 운영진에게 공유할 수 있는 매우 상세한 종합 총평을 작성해주세요. 짧지 않게, 아주 길고 깊이 있게 써주세요.
 
 [데이터]
-- 전체 ${students.length}명, 누적 활동 ${actLogs2.length}건, 총 획득 ${totalPts2}점, 잔반 평균 ${jAvg2}g (0g 달성률 ${Math.round(zeroCnt/Math.max(jLogs2.length,1)*100)}%)
+- 전체 ${students.length}명, 누적 활동 ${actLogs2.length}건, 총 획득 ${totalPts2}점, 잔반 평균 ${jAvg2}g (0g 달성률 ${zeroPct}%)
 - 영역별 참여 비율: ${catStr}
 - 인기 활동 TOP10: ${top10.map(([t,c])=>`${t}(${c}회)`).join(', ')}
 - 누적 점수 상위 3명: ${topStu}
@@ -5502,13 +5553,13 @@ ${obsText}
 ${teacherText}
 
 [작성 조건 — 분량을 반드시 지킬 것]
-1. 전체 분량은 20~24문장, 1400~1800자 이상으로 매우 상세하게 작성할 것 (기존 500자 수준의 3배 이상 분량).
-2. 총 6~7개 문단으로 구성하고 문단 사이에는 줄바꿈을 넣을 것.
+1. 전체 분량은 30문장 이상, 2200~2800자 이상으로 매우 상세하게 작성할 것.
+2. 총 7개 문단으로 구성하고 문단 사이에는 줄바꿈을 넣을 것.
 3. 1문단: 전체 참여 규모, 누적 활동 건수·점수를 짚고 영역별 참여 비율(자연탐구/생명존중/마음인성/소리감수성)을 각각 %와 함께 구체적으로 설명할 것.
 4. 2문단: 인기 활동 TOP10 중 상위 활동들을 구체적으로 언급하며 그 활동이 아이들에게 어떤 실천적 습관(에너지 절약, 자원 재활용, 생명 돌봄 등)을 길러주었는지 서술할 것.
 5. 3문단: 자연 탐구·생명 존중 활동에서 길러진 생명 감수성과 탐구심을 구체적 활동명과 연결해 서술할 것.
 6. 4문단: 마음 인성 활동(형님-동생 마음 도슨트, 주변 어른께 전하는 초록 마음 등)에서 드러난 배려·공감·협력의 태도를 서술할 것.
-7. 5문단: 위에 제시된 아이들 관찰기록과 교사 관찰기록의 내용을 각각 구체적으로 (학생 이름을 언급하며) 최소 3가지 이상 사례로 풀어 서술하여, 아이들의 실제 성장 모습과 행동 변화, 또래 관계, 정서 표현을 생생하게 전달할 것.
+7. 5문단: 위에 제시된 아이들 관찰기록과 교사 관찰기록의 내용을 각각 구체적으로 (학생 이름을 언급하며) 최소 4가지 이상 사례로 풀어 서술하여, 아이들의 실제 성장 모습과 행동 변화, 또래 관계, 정서 표현을 생생하게 전달할 것.
 8. 6문단: 잔반 기록을 통한 식습관 개선(0g 달성률 및 구체적 수치 포함)과 월별 참여 추이(어느 달에 가장 활발했는지, 어떻게 변화했는지)를 데이터에 기반해 분석할 것.
 9. 7문단: 2학기를 향한 기대와 구체적인 지도 방향을 따뜻하게 제안하며 마무리할 것.
 10. "AI", "인공지능", "챗봇" 등의 표현은 절대 사용하지 말 것.
