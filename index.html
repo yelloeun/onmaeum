@@ -4097,13 +4097,13 @@ html,body{
 .wrap{width:100%;height:297mm;display:flex;flex-direction:column;padding:10mm;gap:5px;overflow:hidden;}
 .header-img{flex:0 0 auto;}
 .header-img img{width:100%;display:block;border-radius:4px;}
-.title{flex:0 0 auto;text-align:center;font-size:18px;font-weight:900;color:#3B6D11;letter-spacing:-0.5px;line-height:1.3;padding:5px 0;border-bottom:1.5px solid #e0e0d8;}
+.title{flex:0 0 auto;text-align:center;font-size:20px;font-weight:900;color:#3B6D11;letter-spacing:-0.5px;line-height:1.3;padding:5px 0;border-bottom:1.5px solid #e0e0d8;}
 .grid4{flex:1 1 0;min-height:0;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:6px;}
 .box{background:#f8f8f4;border-radius:8px;padding:9px 11px;border:1px solid #e8e8e0;overflow:hidden;display:flex;flex-direction:column;min-height:0;}
 .box-title{font-size:10px;color:#888;font-weight:700;margin-bottom:5px;flex:0 0 auto;}
-.box-content{flex:1 1 0;min-height:0;display:flex;flex-direction:column;justify-content:center;overflow:hidden;}
+.box-content{flex:1 1 0;min-height:0;display:flex;flex-direction:column;justify-content:flex-start;overflow:hidden;}
 .box-content svg{display:block;width:100%;height:auto;max-height:100%;}
-.box-content.obs-box{justify-content:flex-start;font-size:10.5px;line-height:1.45;color:#2F3A2E;}
+.box-content.obs-box{font-size:10.5px;line-height:1.45;color:#2F3A2E;}
 .comment-box{flex:0 0 auto;border:1px solid #e0e0d8;border-radius:8px;padding:7px 10px;max-height:100px;overflow:hidden;}
 .comment-label{font-size:10px;color:#888;margin-bottom:3px;font-weight:700;}
 .comment-text{font-size:10.5px;line-height:1.5;color:#2F3A2E;white-space:pre-wrap;}
@@ -5316,6 +5316,25 @@ function buildLongReview({studentsCount, actCount, totalPts, jAvg, zeroPct, catP
 }
 
 async function downloadAllPDFDirect(){
+  // 갤러리 사진이 아직 로드되지 않았다면 미리 불러오기 (관찰기록/갤러리 탭을 방문하지 않았어도 항상 표시되도록)
+  if(galleryPhotos.length===0 && typeof _fbDB!=='undefined' && _fbDB){
+    try{
+      const [gSnap,oSnap,mSnap] = await Promise.all([
+        _fbDB.ref('gallery').once('value'),
+        _fbDB.ref('observations').once('value'),
+        _fbDB.ref('memos').once('value'),
+      ]);
+      const gData=gSnap.val()||{};
+      Object.entries(gData).forEach(([k,v])=>{ if(v.url) galleryPhotos.push({fbKey:k,source:'gallery',url:v.url,ts:v.ts||0}); });
+      const oData=oSnap.val()||{};
+      Object.entries(oData).forEach(([k,v])=>{ (v.photos||[]).forEach(url=>galleryPhotos.push({source:'obs',url,ts:v.ts||0})); });
+      const mData=mSnap.val()||{};
+      Object.entries(mData).forEach(([k,v])=>{ (v.photos||[]).forEach(url=>galleryPhotos.push({source:'memo',url,ts:v.ts||0})); });
+      galleryPhotos.sort((a,b)=>b.ts-a.ts);
+    }catch(e){}
+  }
+  const galleryPreview = galleryPhotos.slice(0,12);
+
   // 통계 데이터 수집
   const actLogs2 = allLogs.filter(l=>l.type==='activity');
   const jLogs2 = allLogs.filter(l=>l.type==='janban'&&typeof l.weight==='number');
@@ -5344,15 +5363,14 @@ async function downloadAllPDFDirect(){
   })).sort((a,b)=>b.pts-a.pts);
 
   // 학생 관찰기록: memos는 앱 시작 시 항상 로드되는 배열 (observationLogs는 관찰기록 탭 방문 시에만 채워짐)
+  // 사용자 요청: 잘라내지 않고 전체 다 표시 (음성 녹음만 있고 글이 없는 항목은 text가 비어 자동으로 제외됨)
   const obsEntries = memos
     .map(o=>({ date:o.date, studentId:o.studentId, text:(o.text||'').trim() }))
     .filter(o=>o.text)
-    .slice(-8)
     .reverse();
   const teacherEntries = teacherObsLogs
     .map(o=>({ date:o.date, content:(o.content||'').trim() }))
     .filter(o=>o.content)
-    .slice(-8)
     .reverse();
   const fmtDate = d => (d instanceof Date && !isNaN(d)) ? `${d.getFullYear()}.${d.getMonth()+1}.${d.getDate()}` : '';
   const stuEmoji = sid => students.find(x=>x.id===sid)?.emoji || '';
@@ -5424,7 +5442,7 @@ async function downloadAllPDFDirect(){
 html,body{background:#fff;}
 body{font-family:'Malgun Gothic','맑은 고딕',sans-serif;font-size:11px;color:#2F3A2E;line-height:1.6;padding:14mm 12mm;-webkit-print-color-adjust:exact;print-color-adjust:exact;box-decoration-break:clone;-webkit-box-decoration-break:clone;}
 h1{font-size:20px;color:#3B6D11;margin-bottom:4px;}
-h2{font-size:14px;color:#3B6D11;border-bottom:2px solid #3B6D11;padding-bottom:4px;margin:16px 0 8px;}
+h2{font-size:14px;color:#3B6D11;border-bottom:2px solid #3B6D11;padding-bottom:4px;margin:16px 0 8px;page-break-after:avoid;break-after:avoid-page;page-break-inside:avoid;}
 h3{font-size:12px;color:#555;margin:10px 0 5px;}
 table{width:100%;border-collapse:collapse;margin-bottom:12px;}
 th,td{border:1px solid #ddd;padding:5px 8px;text-align:left;}
@@ -5438,15 +5456,19 @@ tr:nth-child(even){background:#f8f8f4;}
 .cat-val{font-size:20px;font-weight:900;}
 .bar-wrap{background:#e8e8e0;border-radius:4px;height:6px;margin-top:4px;}
 .bar-fill{height:100%;border-radius:4px;}
+.chart-section{page-break-inside:avoid;break-inside:avoid;}
 .chart-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;}
-.chart-box{background:#f8f8f4;border-radius:8px;padding:10px;border:1px solid #e8e8e0;text-align:center;page-break-inside:avoid;}
+.chart-box{background:#f8f8f4;border-radius:8px;padding:10px;border:1px solid #e8e8e0;text-align:center;page-break-inside:avoid;break-inside:avoid;}
 .chart-box img{width:100%;height:auto;display:block;}
 .chart-title{font-size:11px;color:#3B6D11;font-weight:700;margin-bottom:6px;}
-.chart-wide{background:#f8f8f4;border-radius:8px;padding:10px;border:1px solid #e8e8e0;text-align:center;margin-bottom:12px;page-break-inside:avoid;}
+.chart-wide{background:#f8f8f4;border-radius:8px;padding:10px;border:1px solid #e8e8e0;text-align:center;margin-bottom:12px;page-break-inside:avoid;break-inside:avoid;}
 .chart-wide img{width:100%;height:auto;display:block;}
 .obs-table td.obs-date{width:80px;color:#888;font-size:10px;white-space:nowrap;}
 .obs-table td.obs-who{width:60px;font-weight:700;white-space:nowrap;}
 .obs-table td.obs-text{line-height:1.7;}
+.gallery-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px;}
+.gallery-grid div{aspect-ratio:1;border-radius:8px;overflow:hidden;page-break-inside:avoid;break-inside:avoid;}
+.gallery-grid img{width:100%;height:100%;object-fit:cover;display:block;}
 footer{margin-top:20px;font-size:9px;color:#aaa;text-align:center;}
 </style>
 </head><body>
@@ -5485,14 +5507,22 @@ footer{margin-top:20px;font-size:9px;color:#aaa;text-align:center;}
   </div>
 </div>
 
+<div class="chart-section">
 <h2>📊 통계 그래프</h2>
 <div class="chart-grid">
   ${imgCatDonut?`<div class="chart-box"><div class="chart-title">영역별 참여 비율</div><img src="${imgCatDonut}"></div>`:''}
   ${imgJanban?`<div class="chart-box"><div class="chart-title">잔반 기록 분포</div><img src="${imgJanban}"></div>`:''}
+</div>
+</div>
+<div class="chart-section">
+<div class="chart-grid">
   ${imgRank?`<div class="chart-box"><div class="chart-title">학생별 누적 점수</div><img src="${imgRank}"></div>`:''}
   ${imgActTop?`<div class="chart-box"><div class="chart-title">인기 활동 TOP 10</div><img src="${imgActTop}"></div>`:''}
 </div>
+</div>
+<div class="chart-section">
 ${imgTrend?`<div class="chart-wide"><div class="chart-title">월별 활동 추이 (총점 · 건수)</div><img src="${imgTrend}"></div>`:''}
+</div>
 
 <h2>🏆 학생별 누적 순위</h2>
 <table><thead><tr><th>순위</th><th>학생</th><th>누적 점수</th></tr></thead>
@@ -5519,6 +5549,9 @@ ${obsEntries.length?`<h2>✏️ 아이들의 관찰 기록</h2>
 ${teacherEntries.length?`<h2>👩‍🏫 교사 관찰 기록</h2>
 <table class="obs-table"><thead><tr><th style="width:80px">날짜</th><th>내용</th></tr></thead>
 <tbody>${teacherEntries.map(o=>`<tr><td class="obs-date">${fmtDate(o.date)}</td><td class="obs-text">${o.content.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</td></tr>`).join('')}</tbody></table>`:''}
+
+${galleryPreview.length?`<h2>📸 온마음 갤러리</h2>
+<div class="gallery-grid">${galleryPreview.map(p=>`<div><img src="${p.url}"></div>`).join('')}</div>`:''}
 
 <footer>남평 온(溫)마음(音) 정원 · 남평초등학교 병설유치원 · ${new Date().toLocaleDateString('ko-KR')} 출력</footer>
 </body></html>`;
@@ -5571,19 +5604,48 @@ ${teacherText}
     if(txt) commentTxt = txt;
   } catch(e){}
 
-  const finalHtml = html.replace('잠시만 기다려 주세요...', commentTxt.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'));
+  // 인쇄 전, 총평을 확인/수정할 수 있는 모달 표시
+  showReviewEditModal(commentTxt, (approvedText)=>{
+    const finalHtml = html.replace('잠시만 기다려 주세요...', approvedText.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'));
 
-  let iframe = document.getElementById('_allReportIframe');
-  if(!iframe){
-    iframe = document.createElement('iframe');
-    iframe.id = '_allReportIframe';
-    iframe.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;border:none;z-index:-1;visibility:hidden;';
-    document.body.appendChild(iframe);
-  }
-  iframe.onload = function(){
-    setTimeout(()=>{ iframe.contentWindow.focus(); iframe.contentWindow.print(); }, 500);
+    let iframe = document.getElementById('_allReportIframe');
+    if(!iframe){
+      iframe = document.createElement('iframe');
+      iframe.id = '_allReportIframe';
+      iframe.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;border:none;z-index:-1;visibility:hidden;';
+      document.body.appendChild(iframe);
+    }
+    iframe.onload = function(){
+      setTimeout(()=>{ iframe.contentWindow.focus(); iframe.contentWindow.print(); }, 500);
+    };
+    iframe.srcdoc = finalHtml;
+  });
+}
+
+/* 인쇄 전 총평(종합 총평 등)을 교사가 직접 확인·수정할 수 있는 팝업 */
+function showReviewEditModal(initialText, onConfirm){
+  document.getElementById('_reviewEditOverlay')?.remove();
+  const esc = (initialText||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const overlay = document.createElement('div');
+  overlay.id = '_reviewEditOverlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px;';
+  overlay.innerHTML = `
+    <div style="background:#fff;border-radius:14px;max-width:640px;width:100%;max-height:85vh;display:flex;flex-direction:column;padding:20px;box-shadow:0 10px 40px rgba(0,0,0,0.25);font-family:inherit;">
+      <div style="font-weight:800;font-size:16px;color:#3B6D11;margin-bottom:4px;">📝 종합 총평 확인 및 수정</div>
+      <div style="font-size:12px;color:#888;margin-bottom:10px;">인쇄되기 전에 내용을 자유롭게 다듬어주세요 (띄어쓰기, 문구 수정 등).</div>
+      <textarea id="_reviewEditTextarea" style="flex:1;min-height:320px;border:1px solid #e0e0e0;border-radius:8px;padding:12px;font-family:inherit;font-size:13px;line-height:1.8;resize:vertical;box-sizing:border-box;outline:none;">${esc}</textarea>
+      <div style="display:flex;gap:8px;margin-top:12px;">
+        <button id="_reviewCancelBtn" style="flex:1;padding:11px;border-radius:10px;border:none;background:#f0ece4;color:#555;font-weight:700;cursor:pointer;font-family:inherit;font-size:13px;">취소</button>
+        <button id="_reviewConfirmBtn" style="flex:1;padding:11px;border-radius:10px;border:none;background:#3B6D11;color:#fff;font-weight:700;cursor:pointer;font-family:inherit;font-size:13px;">🖨️ 이 내용으로 인쇄</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  overlay.querySelector('#_reviewCancelBtn').onclick = ()=> overlay.remove();
+  overlay.querySelector('#_reviewConfirmBtn').onclick = ()=>{
+    const val = overlay.querySelector('#_reviewEditTextarea').value;
+    overlay.remove();
+    onConfirm(val);
   };
-  iframe.srcdoc = finalHtml;
 }
 
 function openReportModal(mode){
