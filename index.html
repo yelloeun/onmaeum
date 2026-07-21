@@ -4093,18 +4093,15 @@ html,body{
   font-size:10px;overflow:hidden;
   -webkit-print-color-adjust:exact;print-color-adjust:exact;
 }
-.wrap{height:297mm;display:flex;flex-direction:column;padding:5mm 7mm;gap:4px;}
+.wrap{height:297mm;display:flex;flex-direction:column;padding:6mm 8mm;gap:6px;}
 .header-img img{width:100%;display:block;border-radius:4px;}
 .title{text-align:center;font-size:28px;font-weight:900;color:#3B6D11;letter-spacing:-1px;line-height:1.15;white-space:nowrap;padding:4px 0 6px;border-bottom:1.5px solid #e0e0d8;}
-.row{display:grid;grid-template-columns:1fr 1fr;gap:5px;}
-.row-top{flex:0 0 auto;}
-.row-bot{flex:1 1 0;min-height:0;}
-.box{background:#f8f8f4;border-radius:8px;padding:7px 9px;border:1px solid #e8e8e0;overflow:hidden;}
-.box-bot{background:#f8f8f4;border-radius:8px;padding:8px 10px;border:1px solid #e8e8e0;overflow:hidden;display:flex;flex-direction:column;justify-content:center;}
-.box-title{font-size:10px;color:#888;font-weight:700;margin-bottom:5px;}
-svg{display:block;width:100%;height:auto;}
-svg[viewBox*="208"]{height:110px !important;}
-svg[viewBox*="-20"]{height:140px !important;}
+.grid4{flex:1 1 0;min-height:0;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:6px;}
+.box{background:#f8f8f4;border-radius:8px;padding:9px 11px;border:1px solid #e8e8e0;overflow:hidden;display:flex;flex-direction:column;min-height:0;}
+.box-title{font-size:10px;color:#888;font-weight:700;margin-bottom:6px;flex:0 0 auto;}
+.box-content{flex:1 1 0;min-height:0;display:flex;flex-direction:column;justify-content:center;overflow:hidden;}
+.box-content svg{display:block;width:100%;height:auto;max-height:100%;}
+.box-content.obs-box{justify-content:flex-start;font-size:11px;line-height:1.6;color:#2F3A2E;}
 .comment-box{border:1px solid #e0e0d8;border-radius:8px;padding:7px 10px;flex:0 0 auto;}
 .comment-label{font-size:10px;color:#888;margin-bottom:3px;font-weight:700;}
 .comment-text{font-size:11px;line-height:1.75;color:#2F3A2E;white-space:pre-wrap;}
@@ -4118,13 +4115,11 @@ svg[viewBox*="-20"]{height:140px !important;}
 <div class="wrap">
   <div class="header-img"><img src="${headerUrl}" onerror="this.style.display='none'"></div>
   <div class="title">2026학년도 남평행복프로젝트 온(溫)마음(音) 1학기 성장 안내장</div>
-  <div class="row row-top">
-    <div class="box"><div class="box-title">활동 영역별 참여</div>${catHTML}</div>
-    <div class="box"><div class="box-title">인성검사 성장</div>${kediHTML}</div>
-  </div>
-  <div class="row row-bot">
-    <div class="box-bot"><div class="box-title">🥣 냠냠튼튼 초록 빈그릇 급식 잔반 기록</div>${janbanHTML}</div>
-    <div class="box-bot"><div class="box-title">✏️ ${obsTitle}</div>${obsHTML}</div>
+  <div class="grid4">
+    <div class="box"><div class="box-title">활동 영역별 참여</div><div class="box-content">${catHTML}</div></div>
+    <div class="box"><div class="box-title">인성검사 성장</div><div class="box-content">${kediHTML}</div></div>
+    <div class="box"><div class="box-title">🥣 냠냠튼튼 초록 빈그릇 급식 잔반 기록</div><div class="box-content">${janbanHTML}</div></div>
+    <div class="box"><div class="box-title">✏️ ${obsTitle}</div><div class="box-content obs-box">${obsHTML}</div></div>
   </div>
   <div class="comment-box">
     <div class="comment-label">남평행복프로젝트 활동을 통해서...</div>
@@ -4204,6 +4199,30 @@ function selectStatsStudent(id){
   renderStudentStats();
   renderStatsMemoPanel(id);
   renderSoundListFor('statsSoundList2','statsSoundAudio2',null);
+}
+
+/* PDF 삽입용: 화면에 보이지 않는 캔버스에 Chart.js 그래프를 그려 PNG 이미지로 반환 */
+function makeOffscreenChartImage(cfg, w, h){
+  return new Promise(resolve=>{
+    if(typeof Chart === 'undefined'){ resolve(''); return; }
+    const canvas = document.createElement('canvas');
+    canvas.width = w; canvas.height = h;
+    canvas.style.cssText = 'position:fixed;left:-9999px;top:-9999px;';
+    document.body.appendChild(canvas);
+    cfg.options = cfg.options || {};
+    cfg.options.responsive = false;
+    cfg.options.animation = false;
+    cfg.options.devicePixelRatio = 2;
+    let chart;
+    try{ chart = new Chart(canvas.getContext('2d'), cfg); }catch(e){ canvas.remove(); resolve(''); return; }
+    setTimeout(()=>{
+      let url = '';
+      try{ url = canvas.toDataURL('image/png'); }catch(e){}
+      try{ chart.destroy(); }catch(e){}
+      canvas.remove();
+      resolve(url);
+    }, 80);
+  });
 }
 
 /* 차트 헬퍼 - 기존 Chart 파괴 후 재생성 */
@@ -5265,7 +5284,7 @@ let reportSelectedWeek = null;
 let reportSelectedMonth = null;
 
 
-function downloadAllPDFDirect(){
+async function downloadAllPDFDirect(){
   // 통계 데이터 수집
   const actLogs2 = allLogs.filter(l=>l.type==='activity');
   const jLogs2 = allLogs.filter(l=>l.type==='janban'&&typeof l.weight==='number');
@@ -5286,25 +5305,75 @@ function downloadAllPDFDirect(){
   const actCount2={};
   actLogs2.forEach(l=>{actCount2[l.activity]=(actCount2[l.activity]||0)+1;});
   const topA=Object.entries(actCount2).sort((a,b)=>b[1]-a[1]).slice(0,5).map(([t,c])=>`${t}(${c}회)`).join(', ');
+  const top10=Object.entries(actCount2).sort((a,b)=>b[1]-a[1]).slice(0,10);
 
   const sPts2=students.map(s=>({
     id:s.id, emoji:s.emoji,
     pts:actLogs2.filter(l=>l.studentId===s.id).reduce((a,b)=>a+(b.points||0),0)
   })).sort((a,b)=>b.pts-a.pts);
 
-  const obsSamples=observationLogs.slice(-3).map(o=>o.discover||o.text||'').filter(Boolean).join(' / ');
-  const teacherSamples=teacherObsLogs.slice(-2).map(o=>o.content||'').filter(Boolean).join(' / ');
+  const obsSamples=observationLogs.slice(-6).map(o=>o.discover||o.text||'').filter(Boolean).join(' / ');
+  const teacherSamples=teacherObsLogs.slice(-4).map(o=>o.content||'').filter(Boolean).join(' / ');
 
   // 학생별 순위 표
   const rankRows=sPts2.map((s,i)=>`<tr><td>${i+1}위</td><td>${s.emoji} ${s.id}</td><td>${s.pts}점</td></tr>`).join('');
 
   // 활동별 순위 표
-  const actRows=Object.entries(actCount2).sort((a,b)=>b[1]-a[1]).slice(0,10)
+  const actRows=top10
     .map(([t,c],i)=>`<tr><td>${['🥇','🥈','🥉','4','5','6','7','8','9','10'][i]}위</td><td>${t}</td><td>${c}회</td></tr>`).join('');
 
   // 잔반 열매 분포
   const fc=[0,0,0,0];
   jLogs2.forEach(l=>{if(l.weight<=70)fc[0]++;else if(l.weight<=140)fc[1]++;else if(l.weight<=210)fc[2]++;else fc[3]++;});
+  const zeroCnt = jLogs2.filter(l=>l.weight===0).length;
+
+  // 월별 활동 추이 (5~10월)
+  const rMonths=[5,6,7,8,9,10];
+  const monthTotals = rMonths.map(m=> actLogs2.filter(l=>l.date && l.date.getMonth()+1===m).reduce((a,b)=>a+(b.points||0),0));
+  const monthCounts = rMonths.map(m=> actLogs2.filter(l=>l.date && l.date.getMonth()+1===m).length);
+
+  // ====== 그래프 이미지 생성 (Chart.js → PNG) ======
+  const [imgCatDonut, imgRank, imgActTop, imgJanban, imgTrend] = await Promise.all([
+    makeOffscreenChartImage({
+      type:'doughnut',
+      data:{ labels:['🌳 자연탐구','🌱 생명존중','💛 마음인성','🎵 소리감수성'],
+        datasets:[{ data:[catPct['자연탐구'],catPct['생명존중'],catPct['마음인성'],catPct['소리감수성']],
+          backgroundColor:['#7BC87E','#74B8E0','#F5A623','#B39DDB'], borderWidth:2, borderColor:'#fff' }] },
+      options:{ plugins:{ legend:{ position:'bottom', labels:{ font:{size:14}, padding:14 } } }, cutout:'55%' }
+    }, 640, 460),
+    makeOffscreenChartImage({
+      type:'bar',
+      data:{ labels:sPts2.map(s=>`${s.emoji} ${s.id}`),
+        datasets:[{ data:sPts2.map(s=>s.pts), backgroundColor:'#5B9FE8CC', borderColor:'#5B9FE8', borderWidth:2, borderRadius:6 }] },
+      options:{ indexAxis:'y', plugins:{ legend:{ display:false } },
+        scales:{ x:{ beginAtZero:true, ticks:{font:{size:12}} }, y:{ ticks:{font:{size:12}} } } }
+    }, 640, 460),
+    makeOffscreenChartImage({
+      type:'bar',
+      data:{ labels:top10.map(([t])=>t),
+        datasets:[{ data:top10.map(([,c])=>c), backgroundColor:'#3D7A4ACC', borderColor:'#3D7A4A', borderWidth:2, borderRadius:6 }] },
+      options:{ indexAxis:'y', plugins:{ legend:{ display:false } },
+        scales:{ x:{ beginAtZero:true, ticks:{font:{size:11}} }, y:{ ticks:{font:{size:11}} } } }
+    }, 640, 460),
+    makeOffscreenChartImage({
+      type:'doughnut',
+      data:{ labels:['🟢 0g','🍎 1~70g','🍊 71~140g','🍋 141~210g','⚪ 211g~'],
+        datasets:[{ data:[zeroCnt,fc[0],fc[1],fc[2],fc[3]],
+          backgroundColor:['#8BC98F','#E67C73','#F5A623','#F7D354','#C9C9C9'], borderWidth:2, borderColor:'#fff' }] },
+      options:{ plugins:{ legend:{ position:'bottom', labels:{ font:{size:13}, padding:12 } } }, cutout:'55%' }
+    }, 640, 460),
+    makeOffscreenChartImage({
+      type:'line',
+      data:{ labels:rMonths.map(m=>`${m}월`),
+        datasets:[
+          { label:'월별 총점', data:monthTotals, borderColor:'#3B6D11', backgroundColor:'rgba(59,109,17,0.15)', fill:true, tension:0.35, pointRadius:6, pointBackgroundColor:'#3B6D11', yAxisID:'y' },
+          { label:'월별 활동 건수', data:monthCounts, borderColor:'#5B9FE8', backgroundColor:'rgba(91,159,232,0.12)', fill:false, tension:0.35, pointRadius:5, pointBackgroundColor:'#5B9FE8', borderDash:[5,4], yAxisID:'y1' }
+        ] },
+      options:{ plugins:{ legend:{ position:'bottom', labels:{font:{size:13}} } },
+        scales:{ y:{ beginAtZero:true, position:'left', title:{display:true,text:'총점'} },
+          y1:{ beginAtZero:true, position:'right', grid:{drawOnChartArea:false}, title:{display:true,text:'건수'} } } }
+    }, 1000, 420)
+  ]);
 
   const html=`<!DOCTYPE html><html><head><meta charset="UTF-8">
 <style>
@@ -5326,6 +5395,12 @@ tr:nth-child(even){background:#f8f8f4;}
 .cat-val{font-size:20px;font-weight:900;}
 .bar-wrap{background:#e8e8e0;border-radius:4px;height:6px;margin-top:4px;}
 .bar-fill{height:100%;border-radius:4px;}
+.chart-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;}
+.chart-box{background:#f8f8f4;border-radius:8px;padding:10px;border:1px solid #e8e8e0;text-align:center;page-break-inside:avoid;}
+.chart-box img{width:100%;height:auto;display:block;}
+.chart-title{font-size:11px;color:#3B6D11;font-weight:700;margin-bottom:6px;}
+.chart-wide{background:#f8f8f4;border-radius:8px;padding:10px;border:1px solid #e8e8e0;text-align:center;margin-bottom:12px;page-break-inside:avoid;}
+.chart-wide img{width:100%;height:auto;display:block;}
 footer{margin-top:20px;font-size:9px;color:#aaa;text-align:center;}
 </style>
 </head><body>
@@ -5360,6 +5435,15 @@ footer{margin-top:20px;font-size:9px;color:#aaa;text-align:center;}
   </div>
 </div>
 
+<h2>📊 통계 그래프</h2>
+<div class="chart-grid">
+  ${imgCatDonut?`<div class="chart-box"><div class="chart-title">영역별 참여 비율</div><img src="${imgCatDonut}"></div>`:''}
+  ${imgJanban?`<div class="chart-box"><div class="chart-title">잔반 기록 분포</div><img src="${imgJanban}"></div>`:''}
+  ${imgRank?`<div class="chart-box"><div class="chart-title">학생별 누적 점수</div><img src="${imgRank}"></div>`:''}
+  ${imgActTop?`<div class="chart-box"><div class="chart-title">인기 활동 TOP 10</div><img src="${imgActTop}"></div>`:''}
+</div>
+${imgTrend?`<div class="chart-wide"><div class="chart-title">월별 활동 추이 (총점 · 건수)</div><img src="${imgTrend}"></div>`:''}
+
 <h2>🏆 학생별 누적 순위</h2>
 <table><thead><tr><th>순위</th><th>학생</th><th>누적 점수</th></tr></thead>
 <tbody>${rankRows}</tbody></table>
@@ -5371,7 +5455,7 @@ footer{margin-top:20px;font-size:9px;color:#aaa;text-align:center;}
 <h2>🥣 잔반 기록 현황</h2>
 <table><thead><tr><th>구분</th><th>기준</th><th>횟수</th><th>비율</th></tr></thead>
 <tbody>
-<tr><td>🟢 0g 달성</td><td>0g</td><td>${jLogs2.filter(l=>l.weight===0).length}회</td><td>${Math.round(jLogs2.filter(l=>l.weight===0).length/Math.max(jLogs2.length,1)*100)}%</td></tr>
+<tr><td>🟢 0g 달성</td><td>0g</td><td>${zeroCnt}회</td><td>${Math.round(zeroCnt/Math.max(jLogs2.length,1)*100)}%</td></tr>
 <tr><td>🍎 빨강열매</td><td>1~70g</td><td>${fc[0]}회</td><td>${Math.round(fc[0]/Math.max(jLogs2.length,1)*100)}%</td></tr>
 <tr><td>🍊 주황열매</td><td>71~140g</td><td>${fc[1]}회</td><td>${Math.round(fc[1]/Math.max(jLogs2.length,1)*100)}%</td></tr>
 <tr><td>🍋 노랑열매</td><td>141~210g</td><td>${fc[2]}회</td><td>${Math.round(fc[2]/Math.max(jLogs2.length,1)*100)}%</td></tr>
@@ -5389,35 +5473,54 @@ ${teacherSamples?`<h2>👩‍🏫 교사 관찰 기록</h2><div style="backgroun
 <footer>남평 온(溫)마음(音) 정원 · 남평초등학교 병설유치원 · ${new Date().toLocaleDateString('ko-KR')} 출력</footer>
 </body></html>`;
 
-  // iframe 인쇄 — 총평 먼저 생성 후 출력
-  (async()=>{
-    let commentTxt = `이번 1학기 동안 ${students.length}명의 학생들이 남평행복프로젝트에 성실히 참여하였으며, 영역별로는 ${catStr}의 비율로 활동이 이루어졌습니다. 잔반 평균 ${jAvg2}g을 달성하며 올바른 식습관도 함께 기르고 있습니다.`;
-    try {
-      const resp = await fetch('https://api.anthropic.com/v1/messages',{
-        method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({model:'claude-sonnet-4-6', max_tokens:700,
-          messages:[{role:'user',content:`남평행복프로젝트 온(溫)마음(音) 1학기 전체 데이터를 분석해 교사를 위한 종합 총평 4~5문장을 작성해주세요.\n\n[데이터]\n- 총 ${students.length}명, 활동 ${actLogs2.length}건, 잔반 평균 ${jAvg2}g\n- 영역별 참여 비율: ${catStr}\n- 인기 활동 TOP5: ${topA}\n- 아이 관찰기록: "${obsSamples}"\n- 교사 관찰기록: "${teacherSamples}"\n\n[조건] 각 영역 비율 구체적으로 언급, 자연탐구/생명존중/마음인성 활동에서 어떤 인성(배려/협력/생명감수성 등)이 길러졌는지, 관찰기록에서 드러난 아이들의 성장 특징, "AI" 표현 절대 금지, 따뜻하고 구체적인 교육 분석 문체`}]
-        })
-      });
-      const data = await resp.json();
-      const txt = data.content?.[0]?.text||'';
-      if(txt) commentTxt = txt;
-    } catch(e){}
+  // 총평 생성 (더 상세하고 구체적으로) 후 iframe 인쇄
+  let commentTxt = `이번 1학기 동안 ${students.length}명의 학생들이 남평행복프로젝트에 성실히 참여하였으며, 영역별로는 ${catStr}의 비율로 활동이 이루어졌습니다. 잔반 평균 ${jAvg2}g을 달성하며 올바른 식습관도 함께 기르고 있습니다.`;
+  try {
+    const topStu = sPts2.slice(0,3).map(s=>`${s.emoji}${s.id}(${s.pts}점)`).join(', ');
+    const resp = await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({model:'claude-sonnet-4-6', max_tokens:1400,
+        messages:[{role:'user',content:`남평행복프로젝트 온(溫)마음(音) 1학기 전체 데이터를 심층 분석해서, 유치원 교사가 학부모·원 운영진에게 공유할 수 있는 종합 총평을 작성해주세요.
 
-    const finalHtml = html.replace('잠시만 기다려 주세요...', commentTxt.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'));
+[데이터]
+- 전체 ${students.length}명, 누적 활동 ${actLogs2.length}건, 총 획득 ${totalPts2}점, 잔반 평균 ${jAvg2}g (0g 달성률 ${Math.round(zeroCnt/Math.max(jLogs2.length,1)*100)}%)
+- 영역별 참여 비율: ${catStr}
+- 인기 활동 TOP5: ${topA}
+- 누적 점수 상위 3명: ${topStu}
+- 월별(5~10월) 총점 추이: ${monthTotals.join(', ')}
+- 월별(5~10월) 활동 건수 추이: ${monthCounts.join(', ')}
+- 아이들 관찰기록 발췌: "${obsSamples}"
+- 교사 관찰기록 발췌: "${teacherSamples}"
 
-    let iframe = document.getElementById('_allReportIframe');
-    if(!iframe){
-      iframe = document.createElement('iframe');
-      iframe.id = '_allReportIframe';
-      iframe.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;border:none;z-index:-1;visibility:hidden;';
-      document.body.appendChild(iframe);
-    }
-    iframe.onload = function(){
-      setTimeout(()=>{ iframe.contentWindow.focus(); iframe.contentWindow.print(); }, 500);
-    };
-    iframe.srcdoc = finalHtml;
-  })();
+[작성 조건]
+1. 분량은 10~12문장, 500자 이상으로 충분히 상세하게 작성할 것.
+2. 첫 문단: 전체 참여 규모와 영역별 참여 비율(자연탐구/생명존중/마음인성/소리감수성)을 각각 %와 함께 구체적으로 짚어줄 것.
+3. 둘째 문단: 자연 탐구·생명 존중 활동에서 길러진 생명 감수성과 탐구심, 마음 인성 활동(형님-동생 마음 도슨트, 주변 어른께 전하는 초록 마음 등)에서 드러난 배려·공감·협력의 태도를 구체적 사례처럼 서술할 것.
+4. 셋째 문단: 관찰기록과 교사 관찰기록에서 드러난 아이들의 실제 성장 모습(구체적 행동 변화, 또래 관계, 정서 표현 등)을 자연스럽게 녹여 서술할 것.
+5. 넷째 문단: 잔반 기록을 통한 식습관 개선(0g 달성률 포함), 월별 참여 추이에서 보이는 변화(활동이 늘었는지, 꾸준했는지)를 언급할 것.
+6. 마지막 문단: 2학기를 향한 기대와 지도 방향을 따뜻하게 제안하며 마무리할 것.
+7. "AI", "인공지능", "챗봇" 등의 표현은 절대 사용하지 말 것.
+8. 유치원 교사의 시선에서 따뜻하면서도 전문적인 교육 분석 문체로 작성할 것. 문단과 문단 사이에는 줄바꿈을 넣을 것.`}]
+      })
+    });
+    const data = await resp.json();
+    const txt = data.content?.[0]?.text||'';
+    if(txt) commentTxt = txt;
+  } catch(e){}
+
+  const finalHtml = html.replace('잠시만 기다려 주세요...', commentTxt.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'));
+
+  let iframe = document.getElementById('_allReportIframe');
+  if(!iframe){
+    iframe = document.createElement('iframe');
+    iframe.id = '_allReportIframe';
+    iframe.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;border:none;z-index:-1;visibility:hidden;';
+    document.body.appendChild(iframe);
+  }
+  iframe.onload = function(){
+    setTimeout(()=>{ iframe.contentWindow.focus(); iframe.contentWindow.print(); }, 500);
+  };
+  iframe.srcdoc = finalHtml;
 }
 
 function openReportModal(mode){
