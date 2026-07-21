@@ -4084,10 +4084,14 @@ function printReport(){
   clone.querySelector('#reportGalleryHint')?.remove();
   clone.querySelector('#reportPhotoPick')?.remove();
 
-  // 선택된 대표 사진이 하나도 없으면 사진 박스 자체를 숨김
+  // 선택된 대표 사진이 하나도 없으면 사진 박스 자체를 숨김, 있으면 편집용 삭제(X) 버튼 제거
   const photoBox = clone.querySelector('#reportPhotoBox');
   const photoSel = clone.querySelector('#reportPhotoSelected');
-  if(photoBox && photoSel && photoSel.children.length===0) photoBox.remove();
+  if(photoBox && photoSel && photoSel.children.length===0){
+    photoBox.remove();
+  } else if(photoSel){
+    photoSel.querySelectorAll('button').forEach(b=>b.remove());
+  }
 
   // 코멘트 textarea → 줄바꿈이 유지되는 고정 텍스트로 교체 (인쇄 화면엔 입력창이 아니라 완성된 글로 보이도록)
   const safeComment = comment.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
@@ -4106,7 +4110,7 @@ function printReport(){
     .join(';');
 
   // 화면 미리보기(#reportPrintArea)를 그대로 복제해 출력 — 폰트/크기/배치가 화면과 100% 동일.
-  // 내용이 길어 A4 한 장을 넘으면(사진 여러 장 등) 인쇄 직전 자동으로 비율을 줄여 한 장 안에, 잘림 없이 들어가도록 함.
+  // 좌우 여백을 좁혀 A4 가로 폭을 최대한 활용하고, 그래도 세로가 넘치면 인쇄 직전 자동으로 비율을 줄여 한 장 안에 들어가도록 함.
   const html = `<!DOCTYPE html><html><head>
 <meta charset="UTF-8">
 <style>
@@ -4120,25 +4124,32 @@ html,body{
   background:#fff;
   -webkit-print-color-adjust:exact;print-color-adjust:exact;
 }
-#printPad{width:100%;height:297mm;box-sizing:border-box;padding:10mm;overflow:hidden;}
+#printPad{width:100%;height:297mm;box-sizing:border-box;padding:7mm 6mm;overflow:hidden;}
 #reportPrintArea{max-width:100% !important;}
 </style>
 </head><body>
 <div id="printPad">${clone.outerHTML}</div>
 <script>
 window.addEventListener('load', function(){
-  try{
+  function fitToPage(){
     var pad = document.getElementById('printPad');
     var inner = document.getElementById('reportPrintArea');
     var maxH = pad.clientHeight;
+    inner.style.transform = 'none';
     var actualH = inner.scrollHeight;
     if(actualH > maxH){
-      var scale = maxH / actualH;
+      var scale = (maxH / actualH) * 0.99; // 아주 약간 여유를 둬서 반올림 오차로도 잘리지 않게
       inner.style.transformOrigin = 'top center';
       inner.style.transform = 'scale(' + scale + ')';
     }
-  }catch(e){}
-  setTimeout(function(){ window.focus(); window.print(); }, 150);
+  }
+  try{ fitToPage(); }catch(e){}
+  // 이미지 디코딩/폰트 반영이 load 이후에도 살짝 늦어질 수 있어 한 번 더 확인
+  setTimeout(function(){
+    try{ fitToPage(); }catch(e){}
+    window.focus();
+    window.print();
+  }, 250);
 });
 <\/script>
 </body></html>`;
