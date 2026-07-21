@@ -3195,7 +3195,7 @@ function syncToSheet(log){
       category: log.category,
       points: log.points,
       type: log.type,
-      weight: log.weight || null,
+      weight: (typeof log.weight === 'number') ? log.weight : null,
       ts: Date.now()
     };
     _fbDB.ref('logs').push(entry).catch(()=>{});
@@ -3236,7 +3236,7 @@ function loadFromSheet(){
         activity: r.activity, category: r.category,
         points: Number(r.points)||0, type: r.type||'activity', _fbKey: fbKey
       };
-      if(r.weight) log.weight = r.weight;
+      if(typeof r.weight === 'number') log.weight = r.weight;
       allLogs.push(log);
       s.total += log.points;
       if(logDate.toLocaleDateString('ko-KR')===todayStr){
