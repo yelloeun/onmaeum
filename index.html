@@ -4128,7 +4128,7 @@ html,body{
     <div class="box"><div class="box-title">활동 영역별 참여</div><div class="box-content">${catHTML}</div></div>
     <div class="box"><div class="box-title">인성검사 성장</div><div class="box-content">${kediHTML}</div></div>
     <div class="box"><div class="box-title">🥣 냠냠튼튼 초록 빈그릇 급식 잔반 기록</div><div class="box-content">${janbanHTML}</div></div>
-    <div class="box"><div class="box-title">✏️ ${obsTitle}</div><div class="box-content obs-box">${obsHTML}</div></div>
+    <div class="box"><div class="box-title">📝 ${obsTitle}</div><div class="box-content obs-box">${obsHTML}</div></div>
   </div>
   <div class="comment-box">
     <div class="comment-label">남평행복프로젝트 활동을 통해서...</div>
@@ -5561,7 +5561,7 @@ ${imgTrend?`<div class="chart-wide"><div class="chart-title">월별 활동 추�
 <tr style="font-weight:700;"><td colspan="2">총 측정</td><td>${jLogs2.length}회</td><td>평균 ${jAvg2}g</td></tr>
 </tbody></table>
 
-${obsEntries.length?`<h2>✏️ 아이들의 관찰 기록</h2>
+${obsEntries.length?`<h2>📝 아이들의 관찰 기록</h2>
 <table class="obs-table"><thead><tr><th style="width:80px">날짜</th><th style="width:60px">이름</th><th>내용</th></tr></thead>
 <tbody>${obsEntries.map(o=>`<tr><td class="obs-date">${fmtDate(o.date)}</td><td class="obs-who">${stuEmoji(o.studentId)} ${o.studentId}</td><td class="obs-text">${o.text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</td></tr>`).join('')}</tbody></table>`:''}
 ${teacherEntries.length?`<h2>👩‍🏫 교사 관찰 기록</h2>
