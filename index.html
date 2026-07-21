@@ -5510,7 +5510,7 @@ function downloadHomeLetterPDF(selectedQuoteTexts){
   const jLogs = allLogs.filter(l=>l.type==='janban'&&typeof l.weight==='number');
   const totalPts = actLogs.reduce((a,b)=>a+(b.points||0),0);
   const jAvg = jLogs.length ? Math.round(jLogs.reduce((a,b)=>a+(b.weight||0),0)/jLogs.length) : 0;
-  const zeroCnt = jLogs.filter(l=>l.weight===0).length;
+  const zeroCnt = jLogs.filter(l=>(l.weight||0)<=70).length;
   const zeroPct = Math.round(zeroCnt/Math.max(jLogs.length,1)*100);
 
   const cats={nature:0,life:0,heart:0,sound:0};
@@ -5556,7 +5556,7 @@ html,body{width:210mm;height:297mm;overflow:hidden;background:#fff;font-family:'
 .lh-img{width:100%;display:block;border-bottom:2px solid #222;}
 .title-img{width:100%;display:block;margin-bottom:2px;}
 .lh-body{padding:2px 20px 12px;}
-.sub{font-size:28px;font-weight:900;color:#E07A3C;text-align:center;margin:0 0 12px;letter-spacing:.3px;}
+.sub{font-size:26px;font-weight:900;color:#6FB37C;text-align:center;margin:0 0 12px;letter-spacing:.3px;}
 .intro{font-size:11px;line-height:1.62;margin:8px 0;text-align:justify;}
 h4{font-size:12.5px;color:#3B6D11;margin:9px 0 5px;border-left:4px solid #3B6D11;padding-left:6px;}
 .cat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:8px;}
@@ -5634,7 +5634,7 @@ th{background:#EAF3DE;font-weight:700;color:#3B6D11;}
 
     <h4>✔ 냠냠튼튼 초록 빈그릇 (급식 잔반 줄이기)</h4>
     <div class="intro" style="margin:4px 0 8px;">
-      전체 급식 잔반 측정 <b>${jLogs.length}회</b> 중, 잔반 없이 다 먹은 <b>0g 달성</b>이 <b>${zeroCnt}회(${zeroPct}%)</b>였습니다. 평균 잔반량은 <b>${jAvg}g</b>으로,
+      전체 급식 잔반 측정 <b>${jLogs.length}회</b> 중, 잔반을 거의 남기지 않고 <b>🍎 빨강열매</b>를 받은 횟수가 <b>${zeroCnt}회(${zeroPct}%)</b>였습니다. 평균 잔반량은 <b>${jAvg}g</b>으로,
       아이들이 스스로 먹을 만큼만 담아 끝까지 먹는 좋은 습관을 조금씩 길러가고 있습니다.
     </div>
 
