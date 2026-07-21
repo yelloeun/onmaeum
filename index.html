@@ -1097,7 +1097,7 @@ function triggerPWAInstall(){
         border-radius:12px;padding:11px 18px;font-family:inherit;font-size:13px;
         font-weight:800;cursor:pointer;box-shadow:0 3px 10px rgba(61,122,74,.3)
       ">📊 전체 리포트 PDF</button>
-      <button onclick="openHomeLetterPhotoPicker()" style="
+      <button onclick="downloadHomeLetterPDF([])" style="
         background:linear-gradient(135deg,#E07A3C,#F0A860);color:#fff;border:none;
         border-radius:12px;padding:11px 18px;font-family:inherit;font-size:13px;
         font-weight:800;cursor:pointer;box-shadow:0 3px 10px rgba(224,122,60,.3)
@@ -1975,7 +1975,7 @@ function triggerPWAInstall(){
         <div style="display:flex;gap:8px">
           <button onclick="generateStatsComment()" style="background:var(--accent);color:#fff;border:none;border-radius:999px;padding:7px 16px;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer">🔄 생성</button>
           <button onclick="downloadAllPDFDirect()" style="background:linear-gradient(135deg,#3D7A4A,#6FB37C);color:#fff;border:none;border-radius:999px;padding:7px 16px;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer">📊 전체 리포트 PDF</button>
-          <button onclick="openHomeLetterPhotoPicker()" style="background:linear-gradient(135deg,#E07A3C,#F0A860);color:#fff;border:none;border-radius:999px;padding:7px 16px;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer">🏫 가정통신문 PDF</button>
+          <button onclick="downloadHomeLetterPDF([])" style="background:linear-gradient(135deg,#E07A3C,#F0A860);color:#fff;border:none;border-radius:999px;padding:7px 16px;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer">🏫 가정통신문 PDF</button>
         </div>
       </div>
       <div id="statsCommentArea" style="font-size:13px;line-height:1.8;color:var(--ink);background:#fff;border-radius:10px;padding:14px;border:1px solid var(--line);min-height:80px;white-space:pre-wrap">버튼을 눌러 종합 총평을 생성하세요 🌿</div>
@@ -2341,7 +2341,7 @@ function triggerPWAInstall(){
           <div style="display:flex;gap:8px">
             <button onclick="generateTeacherAllComment()" style="background:var(--accent);color:#fff;border:none;border-radius:999px;padding:7px 16px;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer">🔄 생성</button>
             <button onclick="downloadAllPDFDirect()" style="background:linear-gradient(135deg,#3D7A4A,#6FB37C);color:#fff;border:none;border-radius:999px;padding:7px 16px;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer">📊 전체 리포트 PDF</button>
-            <button onclick="openHomeLetterPhotoPicker()" style="background:linear-gradient(135deg,#E07A3C,#F0A860);color:#fff;border:none;border-radius:999px;padding:7px 16px;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer">🏫 가정통신문 PDF</button>
+            <button onclick="downloadHomeLetterPDF([])" style="background:linear-gradient(135deg,#E07A3C,#F0A860);color:#fff;border:none;border-radius:999px;padding:7px 16px;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer">🏫 가정통신문 PDF</button>
           </div>
         </div>
         <div id="teacherAllCommentArea" style="font-size:13px;line-height:1.8;color:var(--ink);background:#fff;border-radius:10px;padding:14px;border:1px solid var(--line);min-height:80px;white-space:pre-wrap">버튼을 눌러 종합 총평을 생성하세요 🌿</div>
@@ -5479,6 +5479,11 @@ function downloadHomeLetterPDF(selectedPhotoUrls){
   const quotes = memos.map(o=>({studentId:o.studentId, text:(o.text||'').trim()}))
     .filter(o=>o.text).slice(-4).reverse();
 
+  const catLabels = {nature:'🌳 자연 탐구', life:'🌱 생명 존중', heart:'💛 마음 인성', sound:'🎵 소리 감수성'};
+  const topCatKey = Object.entries(catPct).sort((a,b)=>b[1]-a[1])[0][0];
+  const topCatLabel = catLabels[topCatKey];
+  const topCatVal = catPct[topCatKey];
+
   const galleryPreview = (selectedPhotoUrls && selectedPhotoUrls.length)
     ? selectedPhotoUrls.slice(0,4).map(url=>({url}))
     : galleryPhotos.slice(0,4);
@@ -5498,7 +5503,7 @@ html,body{width:210mm;height:297mm;overflow:hidden;background:#fff;font-family:'
 .lh-img{width:100%;display:block;border-bottom:2px solid #222;}
 .title-img{width:100%;display:block;margin-bottom:2px;}
 .lh-body{padding:8px 20px 12px;}
-.sub{font-size:11px;color:#777;text-align:center;margin:-4px 0 8px;}
+.sub{font-size:20px;font-weight:800;color:#666;text-align:center;margin:2px 0 12px;letter-spacing:.2px;}
 .intro{font-size:11px;line-height:1.62;margin:8px 0;text-align:justify;}
 h4{font-size:12.5px;color:#3B6D11;margin:9px 0 5px;border-left:4px solid #3B6D11;padding-left:6px;}
 .cat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:8px;}
@@ -5511,11 +5516,18 @@ th{background:#EAF3DE;font-weight:700;color:#3B6D11;}
 .summary-row{display:flex;gap:8px;margin-bottom:8px;}
 .summary-box{flex:1;background:#f8f8f4;border:1px solid #e0e0e0;border-radius:8px;padding:7px 8px;text-align:center;}
 .summary-box b{font-size:15px;color:#3B6D11;display:block;}
-.quote-box{background:#f8f8f4;border-left:3px solid #E07A3C;border-radius:6px;padding:6px 9px;margin-bottom:5px;font-size:10.5px;line-height:1.5;}
-.quote-box b{color:#3B6D11;}
-.photo-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:8px;}
-.photo-grid div{height:66px;border-radius:6px;overflow:hidden;border:1px solid #e0e0e0;}
-.photo-grid img{width:100%;height:100%;object-fit:cover;display:block;}
+.highlight-box{background:#FFF8ED;border:1.5px solid #F0C48A;border-radius:8px;padding:8px 10px;}
+.hl-item{font-size:10.5px;line-height:1.75;padding:2px 0;}
+.hl-item b{color:#3B6D11;}
+.edit-hint{font-size:10px;color:#999;text-align:center;margin:-2px 0 6px;}
+.quotes-board{background:#F2ECDD;border:1px solid #ddd;border-radius:10px;padding:14px 14px 8px;margin-bottom:8px;display:flex;flex-wrap:wrap;gap:10px;justify-content:center;}
+.postit{width:150px;min-height:64px;padding:9px 10px 7px;font-size:10.5px;line-height:1.55;color:#3a3624;box-shadow:1px 2px 6px rgba(0,0,0,.18);border-radius:2px;outline:none;cursor:text;}
+.postit:nth-child(4n+1){background:#FFF3A0;transform:rotate(-3deg);}
+.postit:nth-child(4n+2){background:#C9F2C0;transform:rotate(2deg);}
+.postit:nth-child(4n+3){background:#B9E4FA;transform:rotate(-2deg);}
+.postit:nth-child(4n+4){background:#FFD4E5;transform:rotate(3deg);}
+.print-btn{position:fixed;top:14px;right:14px;z-index:999;background:#3B6D11;color:#fff;border:none;border-radius:999px;padding:10px 20px;font-size:14px;font-weight:800;cursor:pointer;box-shadow:0 3px 10px rgba(0,0,0,.25);}
+@media print{ .no-print{display:none !important;} }
 .footer-sign{text-align:center;margin-top:10px;}
 .footer-sign .date{font-size:11.5px;margin-bottom:3px;}
 .footer-sign .who{font-size:14px;font-weight:900;}
@@ -5524,7 +5536,7 @@ th{background:#EAF3DE;font-weight:700;color:#3B6D11;}
 <div id="printPad"><div id="letter">
   <img class="lh-img" src="${LOGO_IMG}">
   <div class="lh-body">
-    <img class="title-img" src="${TITLE_IMG}" style="max-width:520px;margin:4px auto 0;display:block;">
+    <img class="title-img" src="${TITLE_IMG}" style="width:100%;max-width:100%;margin:4px auto 0;display:block;">
     <div class="sub">- 남평행복프로젝트 온(溫)마음(音) 1학기 결과 안내 -</div>
     <div class="intro">
       학부모님 안녕하십니까? 어느덧 무더운 여름, 아이들과 함께 걸어온 「남평 행복 프로젝트: 온(溫)마음(音)」의 1학기 여정이 마무리되었습니다.
@@ -5555,9 +5567,13 @@ th{background:#EAF3DE;font-weight:700;color:#3B6D11;}
         <tbody>${top5.map(([t,c],i)=>`<tr><td>${i+1}위</td><td>${t}</td><td>${c}회</td></tr>`).join('')}</tbody></table>
       </div>
       <div>
-        <h4>✔ 누적 참여 상위 어린이</h4>
-        <table><thead><tr><th style="width:36px">순위</th><th>이름</th><th style="width:56px">점수</th></tr></thead>
-        <tbody>${sPts.map((s,i)=>`<tr><td>${i+1}위</td><td>${s.emoji} ${s.id}</td><td>${s.pts}점</td></tr>`).join('')}</tbody></table>
+        <h4>✔ 이번 학기 성장 하이라이트</h4>
+        <div class="highlight-box">
+          <div class="hl-item">🌈 <b>${topCatLabel}</b> 활동이 ${topCatVal}%로 가장 활발했어요</div>
+          <div class="hl-item">📌 아이들이 실천한 활동은 총 <b>${actLogs.length}건</b>이에요</div>
+          <div class="hl-item">🏆 가장 사랑받은 활동은 <b>"${top5[0]?top5[0][0]:'-'}"</b>${top5[0]?`(${top5[0][1]}회)`:''}이었어요</div>
+          <div class="hl-item">🥣 급식 잔반은 평균 <b>${jAvg}g</b>으로, 스스로 담아 먹는 습관을 길러가고 있어요</div>
+        </div>
       </div>
     </div>
 
@@ -5567,9 +5583,7 @@ th{background:#EAF3DE;font-weight:700;color:#3B6D11;}
       아이들이 스스로 먹을 만큼만 담아 끝까지 먹는 좋은 습관을 조금씩 길러가고 있습니다.
     </div>
 
-    ${quotes.length?`<h4>✔ 아이들의 목소리</h4>${quotes.map(q=>`<div class="quote-box"><b>${q.studentId}</b> — "${q.text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}"</div>`).join('')}`:''}
-
-    ${galleryPreview.length?`<h4>✔ 이렇게 활동했어요</h4><div class="photo-grid">${galleryPreview.map(p=>`<div><img src="${p.url}"></div>`).join('')}</div>`:''}
+    ${quotes.length?`<h4>✔ 아이들의 목소리</h4><div class="edit-hint no-print">📝 내용을 클릭하면 오타를 직접 수정할 수 있어요</div><div class="quotes-board">${quotes.map(q=>`<div class="postit" contenteditable="true" spellcheck="false">${q.text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>`).join('')}</div>`:''}
 
     <div class="intro">
       한 학기 동안 아이들은 텃밭을 가꾸고 생태를 관찰하며 자연의 소중함을 몸으로 느꼈고, 형님-동생이 서로를 배려하는 마음 도슨트 활동과 주변 어른께 마음을 전하는 활동을 통해
@@ -5583,6 +5597,7 @@ th{background:#EAF3DE;font-weight:700;color:#3B6D11;}
     </div>
   </div>
 </div></div>
+<button class="print-btn no-print" onclick="window.print()">🖨️ 인쇄 / PDF 저장</button>
 <script>
 window.addEventListener('load', function(){
   function fitToPage(){
@@ -5601,23 +5616,16 @@ window.addEventListener('load', function(){
     }
   }
   try{ fitToPage(); }catch(e){}
-  setTimeout(function(){
-    try{ fitToPage(); }catch(e){}
-    window.focus();
-    window.print();
-  }, 250);
+  window.addEventListener('resize', function(){ try{ fitToPage(); }catch(e){} });
 });
 <\/script>
 </body></html>`;
 
-  let iframe = document.getElementById('_homeLetterIframe');
-  if(!iframe){
-    iframe = document.createElement('iframe');
-    iframe.id = '_homeLetterIframe';
-    iframe.style.cssText = 'position:fixed;top:0;left:0;width:210mm;height:297mm;border:none;z-index:-1;visibility:hidden;';
-    document.body.appendChild(iframe);
-  }
-  iframe.srcdoc = html;
+  const win = window.open('', '_blank');
+  if(!win){ alert('팝업이 차단되었어요. 브라우저의 팝업 차단을 허용해주세요.'); return; }
+  win.document.open();
+  win.document.write(html);
+  win.document.close();
 }
 
 async function downloadAllPDFDirect(){
