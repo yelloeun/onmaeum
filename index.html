@@ -4064,23 +4064,40 @@ function printReport(){
   const s = students.find(x=>x.id===reportStudent);
   if(!s) return;
 
+  const src = document.getElementById('reportPrintArea');
+  if(!src) return;
+
+  // 안내장 핵심 내용이 아직 그려지지 않았다면(렌더링 타이밍 문제) 빈 PDF가 나가지 않도록 방지
   const catHTML    = document.getElementById('reportCatBars')?.innerHTML||'';
   const kediHTML   = document.getElementById('reportKediBars')?.innerHTML||'';
   const janbanHTML = document.getElementById('reportJanban')?.innerHTML||'';
-  const obsHTML    = document.getElementById('reportObserve')?.innerHTML||'';
-  const obsTitle   = document.getElementById('reportObserveTitle')?.textContent||'아이의 관찰 기록';
-
-  // 안내장 핵심 내용이 아직 그려지지 않았다면(렌더링 타이밍 문제) 빈 PDF가 나가지 않도록 방지
   if(!catHTML.trim() || !kediHTML.trim() || !janbanHTML.trim()){
     alert('안내장 내용이 아직 준비 중이에요. 잠시 후 다시 "PDF로 저장"을 눌러주세요!');
     return;
   }
 
-  const photoHTML  = reportSelectedPhotos.map(u=>
-    `<div><img src="${u}"></div>`
-  ).join('');
-  const headerUrl = 'https://res.cloudinary.com/dukzrwvx6/image/upload/f_auto,q_auto/%EC%A7%80%EA%B5%AC_%EC%98%A8_On_%EB%8F%84_%EB%82%AE%EC%B6%94%EB%8A%94_%EC%98%A8_%E6%BA%AB_%EB%A7%88%EC%9D%8C_qwmzrr.png';
+  const clone = src.cloneNode(true);
+
+  // 편집 전용 UI 제거 (다시생성 버튼 / 사진 업로드+갤러리 선택 컨트롤)
+  clone.querySelector('#regenBtn')?.remove();
+  clone.querySelector('#reportPhotoUploadRow')?.remove();
+  clone.querySelector('#reportGalleryHint')?.remove();
+  clone.querySelector('#reportPhotoPick')?.remove();
+
+  // 선택된 대표 사진이 하나도 없으면 사진 박스 자체를 숨김
+  const photoBox = clone.querySelector('#reportPhotoBox');
+  const photoSel = clone.querySelector('#reportPhotoSelected');
+  if(photoBox && photoSel && photoSel.children.length===0) photoBox.remove();
+
+  // 코멘트 textarea → 줄바꿈이 유지되는 고정 텍스트로 교체 (인쇄 화면엔 입력창이 아니라 완성된 글로 보이도록)
   const safeComment = comment.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const ta = clone.querySelector('#reportComment');
+  if(ta){
+    const div = document.createElement('div');
+    div.style.cssText = 'width:100%;font-family:inherit;font-size:13px;line-height:1.8;color:#2F3A2E;white-space:pre-wrap;';
+    div.innerHTML = safeComment;
+    ta.replaceWith(div);
+  }
 
   // 현재 앱의 CSS 변수 수집 (인라인 style의 var(--line) 등 해석용)
   const rootStyle = getComputedStyle(document.documentElement);
@@ -4088,64 +4105,37 @@ function printReport(){
     .map(v=>`${v}:${rootStyle.getPropertyValue(v).trim()}`)
     .join(';');
 
-  // A4 한 장에 고정 — 상하좌우 여백 1cm 동일, 4개 표 크기/여백 동일
+  // 화면 미리보기(#reportPrintArea)를 그대로 복제해 출력 — 폰트/크기/배치가 화면과 100% 동일.
+  // 내용이 길어 A4 한 장을 넘으면(사진 여러 장 등) 인쇄 직전 자동으로 비율을 줄여 한 장 안에, 잘림 없이 들어가도록 함.
   const html = `<!DOCTYPE html><html><head>
 <meta charset="UTF-8">
 <style>
 :root{${cssVars};}
-*{box-sizing:border-box;margin:0;padding:0;}
+*{box-sizing:border-box;}
 @page{size:A4 portrait;margin:0;}
 html,body{
+  margin:0;padding:0;
+  width:210mm;height:297mm;overflow:hidden;
   font-family:'Malgun Gothic','맑은 고딕',sans-serif;
-  width:210mm;height:297mm;background:#fff;
-  overflow:hidden;
+  background:#fff;
   -webkit-print-color-adjust:exact;print-color-adjust:exact;
 }
-.wrap{width:100%;height:297mm;display:flex;flex-direction:column;padding:10mm;gap:5px;overflow:hidden;}
-.header-img{flex:0 0 auto;}
-.header-img img{width:100%;display:block;border-radius:4px;}
-.title{flex:0 0 auto;text-align:center;font-size:20px;font-weight:900;color:#3B6D11;letter-spacing:-0.5px;line-height:1.3;padding:5px 0;border-bottom:1.5px solid #e0e0d8;}
-.grid4{flex:0 0 auto;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:auto auto;gap:6px;}
-.box{background:#f8f8f4;border-radius:8px;padding:9px 11px;border:1px solid #e8e8e0;overflow:visible;}
-.box-title{font-size:10px;color:#888;font-weight:700;margin-bottom:5px;}
-.box-content{font-size:10.5px;line-height:1.45;color:#2F3A2E;}
-.box-content svg{display:block;width:100%;height:auto;}
-.box-content.obs-box{font-size:10.5px;line-height:1.45;color:#2F3A2E;}
-.comment-box{flex:0 0 auto;border:1px solid #e0e0d8;border-radius:8px;padding:7px 10px;max-height:100px;overflow:hidden;}
-.comment-label{font-size:10px;color:#888;margin-bottom:3px;font-weight:700;}
-.comment-text{font-size:10.5px;line-height:1.5;color:#2F3A2E;white-space:pre-wrap;}
-.photo-wrap{flex:0 0 auto;border-radius:8px;padding:5px 8px;border:1px solid #e8e8e0;background:#f8f8f4;}
-.photo-label{font-size:10px;color:#555;font-weight:700;margin-bottom:4px;}
-.photo-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;}
-.photo-grid div{height:62px;border-radius:6px;overflow:hidden;}
-.photo-grid img{width:100%;height:100%;object-fit:cover;display:block;}
+#printPad{width:100%;height:297mm;box-sizing:border-box;padding:10mm;overflow:hidden;}
+#reportPrintArea{max-width:100% !important;}
 </style>
 </head><body>
-<div class="wrap">
-  <div class="header-img"><img src="${headerUrl}" onerror="this.style.display='none'"></div>
-  <div class="title">2026학년도 남평행복프로젝트 온(溫)마음(音) 1학기 성장 안내장</div>
-  <div class="grid4">
-    <div class="box"><div class="box-title">활동 영역별 참여</div><div class="box-content">${catHTML}</div></div>
-    <div class="box"><div class="box-title">인성검사 성장</div><div class="box-content">${kediHTML}</div></div>
-    <div class="box"><div class="box-title">🥣 냠냠튼튼 초록 빈그릇 급식 잔반 기록</div><div class="box-content">${janbanHTML}</div></div>
-    <div class="box"><div class="box-title">📝 ${obsTitle}</div><div class="box-content obs-box">${obsHTML}</div></div>
-  </div>
-  <div class="comment-box">
-    <div class="comment-label">남평행복프로젝트 활동을 통해서...</div>
-    <div class="comment-text">${safeComment}</div>
-  </div>
-  ${photoHTML?`<div class="photo-wrap"><div class="photo-label">📸 온마음 활동에 이렇게 참여했어요</div><div class="photo-grid">${photoHTML}</div></div>`:''}
-</div>
+<div id="printPad">${clone.outerHTML}</div>
 <script>
 window.addEventListener('load', function(){
   try{
-    var wrap = document.querySelector('.wrap');
-    var maxH = document.documentElement.clientHeight; // 297mm를 px로 환산한 값
-    var actualH = wrap.scrollHeight;
+    var pad = document.getElementById('printPad');
+    var inner = document.getElementById('reportPrintArea');
+    var maxH = pad.clientHeight;
+    var actualH = inner.scrollHeight;
     if(actualH > maxH){
       var scale = maxH / actualH;
-      wrap.style.transformOrigin = 'top center';
-      wrap.style.transform = 'scale(' + scale + ')';
+      inner.style.transformOrigin = 'top center';
+      inner.style.transform = 'scale(' + scale + ')';
     }
   }catch(e){}
   setTimeout(function(){ window.focus(); window.print(); }, 150);
@@ -4154,8 +4144,6 @@ window.addEventListener('load', function(){
 </body></html>`;
 
   // iframe을 사용한 인쇄 — 날짜/URL 헤더 없음, 팝업 차단 없음
-  // 인쇄 여부/타이밍은 위 인라인 스크립트가 이미지까지 모두 로드된 뒤(window load) 알아서 처리하고,
-  // 내용이 한 장을 넘으면 자동으로 비율을 줄여 절대 잘리지 않도록 함
   let iframe = document.getElementById('_printIframe');
   if(!iframe){
     iframe = document.createElement('iframe');
