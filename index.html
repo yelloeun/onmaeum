@@ -2216,7 +2216,8 @@ function triggerPWAInstall(){
                   <div id="reportJanban" style="display:flex;flex-direction:column;gap:5px"></div>
                 </div>
                 <div style="background:#f8f8f4;border-radius:10px;padding:10px 12px;border:1px solid #e8e8e0">
-                  <div style="font-size:11px;color:#888;margin-bottom:8px">✏️ <span id="reportObserveTitle">아이의 관찰 기록</span></div>
+                  <div style="font-size:11px;color:#888;margin-bottom:2px">✏️ <span id="reportObserveTitle">아이의 관찰 기록</span></div>
+                  <div id="reportObserveHint" style="font-size:10px;color:#bbb;margin-bottom:8px">내용을 클릭하면 오타를 직접 수정할 수 있어요</div>
                   <div id="reportObserve" style="display:flex;flex-direction:column;gap:6px"></div>
                 </div>
               </div>
@@ -3770,15 +3771,43 @@ async function selectReportStudent(id){
     const lastName = (s.fullId||s.id).slice(1);
     const lastChar = lastName.charCodeAt(lastName.length-1);
     const hasBatchim = (lastChar - 0xAC00) % 28 !== 0;
-    obsTitle.textContent = `${lastName}${hasBatchim?'이':''}의 관찰 기록`;
+    obsTitle.textContent = allObsLogs.length===0
+      ? `${lastName}${hasBatchim?'이':''}의 활동 모습`
+      : `${lastName}${hasBatchim?'이':''}의 관찰 기록`;
   }
 
   const obsEl=document.getElementById('reportObserve');
   if(obsEl){
-    if(allObsLogs.length===0){ obsEl.innerHTML=`<div style="font-size:12px;color:#aaa">기록 없음</div>`; }
+    if(allObsLogs.length===0){
+      // 개인 관찰기록이 없는 아이 — 실제 활동 데이터를 바탕으로 자연스러운 한 줄을 자동 생성
+      const fullName = s.fullId||s.id;
+      const firstName = fullName.length >= 2 ? fullName.slice(1) : fullName;
+      const lastChar = firstName.charCodeAt(firstName.length-1);
+      const hasBatchim = (lastChar - 0xAC00) % 28 !== 0;
+      const nameEun = firstName + (hasBatchim ? '이는' : '는');
+      const nameI = firstName + (hasBatchim ? '이' : '');
+
+      const sActLogs = allLogs.filter(l=>l.studentId===id && l.type==='activity');
+      const catNames = {nature:'자연 탐구',life:'생명 존중',sound:'소리 감수성',heart:'마음 인성'};
+      const catPts = {nature:0,life:0,sound:0,heart:0};
+      sActLogs.forEach(l=>{ if(catPts[l.category]!==undefined) catPts[l.category]+=(l.points||0); });
+      const topCatKey = Object.entries(catPts).sort((a,b)=>b[1]-a[1])[0];
+      const topCatName = (topCatKey && topCatKey[1]>0) ? catNames[topCatKey[0]] : null;
+
+      const actCount = {};
+      sActLogs.forEach(l=>{ if(l.activity) actCount[l.activity]=(actCount[l.activity]||0)+1; });
+      const topAct = Object.entries(actCount).sort((a,b)=>b[1]-a[1])[0];
+
+      const sIdx = students.findIndex(x=>x.id===id);
+      const fallbackObsLines = [
+        topAct ? `${nameEun} "${topAct[0]}" 활동에 꾸준히 참여하며 즐겁게 하루하루를 보냈어요.` : `${nameEun} 학교의 다양한 활동에 성실하게 참여하는 모습을 보였어요.`,
+        topCatName ? `${topCatName} 영역에서 특히 적극적인 모습을 보이며 자신만의 속도로 성장해 나갔어요.` : `자기만의 속도로 차근차근 성장해 나가는 모습이 대견했어요.`,
+      ];
+      obsEl.innerHTML = fallbackObsLines.map(t=>`<div contenteditable="true" spellcheck="false" style="font-size:12px;color:#2F3A2E;line-height:1.7;padding:4px 0;outline:none;cursor:text">${t}</div>`).join('<div style="height:0.5px;background:#e8e8e0;margin:3px 0"></div>');
+    }
     else obsEl.innerHTML=allObsLogs.map(o=>{
       const text=o.discover||o.text||o.feeling||'';
-      return `<div style="font-size:12px;color:#2F3A2E;line-height:1.7;padding:4px 0">"${text.slice(0,70)}${text.length>70?'…':''}"</div>`;
+      return `<div contenteditable="true" spellcheck="false" style="font-size:12px;color:#2F3A2E;line-height:1.7;padding:4px 0;outline:none;cursor:text">"${text.slice(0,70)}${text.length>70?'…':''}"</div>`;
     }).join('<div style="height:0.5px;background:#e8e8e0;margin:3px 0"></div>');
   }
 
@@ -4090,6 +4119,7 @@ function printReport(){
   clone.querySelector('#reportPhotoUploadRow')?.remove();
   clone.querySelector('#reportGalleryHint')?.remove();
   clone.querySelector('#reportPhotoPick')?.remove();
+  clone.querySelector('#reportObserveHint')?.remove();
 
   // 선택된 대표 사진이 하나도 없으면 사진 박스 자체를 숨김, 있으면 편집용 삭제(X) 버튼 제거
   const photoBox = clone.querySelector('#reportPhotoBox');
@@ -5509,9 +5539,15 @@ function downloadHomeLetterPDF(selectedQuoteTexts){
   const actLogs = allLogs.filter(l=>l.type==='activity');
   const jLogs = allLogs.filter(l=>l.type==='janban'&&typeof l.weight==='number');
   const totalPts = actLogs.reduce((a,b)=>a+(b.points||0),0);
+  // ⚠️ 2026년 1학기 한정 보정값: 저장 버그(weight=0이 null로 저장되던 문제)로 인해
+  // 무게값이 유실된 "완전히 다 먹음(0g)" 기록을 점수 역산으로 추정한 값입니다.
+  // 버그는 수정되었으므로, 다음 학기 가정통신문을 만들 때는 이 값을 0으로 바꿔주세요.
+  const RECOVERED_ZERO_COUNT = 84;
+
+  const jTotalCount = jLogs.length + RECOVERED_ZERO_COUNT;
   const jAvg = jLogs.length ? Math.round(jLogs.reduce((a,b)=>a+(b.weight||0),0)/jLogs.length) : 0;
-  const zeroCnt = jLogs.filter(l=>(l.weight||0)<=70).length;
-  const zeroPct = Math.round(zeroCnt/Math.max(jLogs.length,1)*100);
+  const zeroCnt = jLogs.filter(l=>(l.weight||0)<=70).length + RECOVERED_ZERO_COUNT;
+  const zeroPct = Math.round(zeroCnt/Math.max(jTotalCount,1)*100);
 
   const cats={nature:0,life:0,heart:0,sound:0};
   actLogs.forEach(l=>{if(cats[l.category]!==undefined)cats[l.category]+=(l.points||0);});
@@ -5634,7 +5670,7 @@ th{background:#EAF3DE;font-weight:700;color:#3B6D11;}
 
     <h4>✔ 냠냠튼튼 초록 빈그릇 (급식 잔반 줄이기)</h4>
     <div class="intro" style="margin:4px 0 8px;">
-      전체 급식 잔반 측정 <b>${jLogs.length}회</b> 중, 잔반을 거의 남기지 않고 <b>🍎 빨강열매</b>를 받은 횟수가 <b>${zeroCnt}회(${zeroPct}%)</b>였습니다. 평균 잔반량은 <b>${jAvg}g</b>으로,
+      전체 급식 잔반 측정 <b>${jTotalCount}회</b> 중, 잔반을 거의 남기지 않고 <b>🍎 빨강열매</b>를 받은 횟수가 <b>${zeroCnt}회(${zeroPct}%)</b>였습니다. 평균 잔반량은 <b>${jAvg}g</b>으로,
       아이들이 스스로 먹을 만큼만 담아 끝까지 먹는 좋은 습관을 조금씩 길러가고 있습니다.
     </div>
 
