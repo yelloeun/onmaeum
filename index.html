@@ -5059,6 +5059,58 @@ function downloadFullCSV(){
     csv += `${ldate},${l.studentId},${l.grade},"${l.activity}",${CAT[l.category]||l.category},${l.points}\n`;
   });
 
+  /* ─────────────────────────────────────────────
+     시트 9: 학생 관찰기록·메모 전체 원본
+  ───────────────────────────────────────────── */
+  csv += `\n[학생 관찰기록·메모 전체 원본]\n`;
+  csv += `날짜,이름,학년,구분,발견한 점/메모,느낀 점\n`;
+  const csvEsc = (t)=>`"${String(t||'').replace(/"/g,'""')}"`;
+  const allObsRows = [
+    ...observationLogs.map(o=>({date:o.date, studentId:o.studentId, type:'관찰기록', main:o.discover||'', sub:o.feeling||''})),
+    ...memos.map(m=>({date:m.date, studentId:m.studentId, type:'메모', main:m.text||'', sub:''}))
+  ].sort((a,b)=>a.date-b.date);
+  allObsRows.forEach(o=>{
+    const ld=o.date;
+    const ldate=`${ld.getFullYear()}-${String(ld.getMonth()+1).padStart(2,'0')}-${String(ld.getDate()).padStart(2,'0')}`;
+    const s = students.find(x=>x.id===o.studentId);
+    csv += `${ldate},${o.studentId},${s?s.grade:''},${o.type},${csvEsc(o.main)},${csvEsc(o.sub)}\n`;
+  });
+
+  /* ─────────────────────────────────────────────
+     시트 10: 인성검사(KEDI) 결과 원본
+  ───────────────────────────────────────────── */
+  csv += `\n[인성검사(KEDI) 결과 원본]\n`;
+  csv += `이름,학년,회차,제출여부,자기인식,협력소통,대인관계,윤리책임,평균\n`;
+  const kediAreasAll = ['자기인식 및 관리','협력적 소통','대인관계 및 공동체','윤리적 책임'];
+  const kediGetAvg = (d,area)=>{
+    if(!d || !d.submitted) return null;
+    const qs = KEDI_QUESTIONS.map((q,i)=>({...q,i})).filter(q=>q.area===area);
+    const vs = qs.map(q=>d[`q${q.i}`]).filter(v=>v);
+    return vs.length ? Math.round(vs.reduce((a,b)=>a+b,0)/vs.length*10)/10 : null;
+  };
+  students.forEach(s=>{
+    [1,2,3].forEach(round=>{
+      const d = kediData[`${s.id}_${round}`];
+      if(!d) return;
+      const areaAvgs = kediAreasAll.map(a=>kediGetAvg(d,a));
+      const valid = areaAvgs.filter(v=>v!==null);
+      const overall = valid.length ? (valid.reduce((a,b)=>a+b,0)/valid.length).toFixed(1) : '—';
+      csv += `${s.id},${s.grade},${round}회차,${d.submitted?'제출완료':'미제출'},`;
+      csv += `${areaAvgs.map(v=>v===null?'—':v).join(',')},${overall}\n`;
+    });
+  });
+
+  /* ─────────────────────────────────────────────
+     시트 11: 교사 관찰 기록 전체 원본
+  ───────────────────────────────────────────── */
+  csv += `\n[교사 관찰 기록 전체 원본]\n`;
+  csv += `날짜,작성 교사,대상 학생,관찰 내용,느낀 점\n`;
+  [...teacherObsLogs].sort((a,b)=>a.date-b.date).forEach(o=>{
+    const ld=o.date;
+    const ldate=`${ld.getFullYear()}-${String(ld.getMonth()+1).padStart(2,'0')}-${String(ld.getDate()).padStart(2,'0')}`;
+    csv += `${ldate},${csvEsc(o.teacherName)},${csvEsc(o.studentId)},${csvEsc(o.content)},${csvEsc(o.feeling)}\n`;
+  });
+
   /* ─────── 다운로드 ─────── */
   const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
   const a=document.createElement('a');
