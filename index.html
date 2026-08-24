@@ -1516,9 +1516,17 @@ function triggerPWAInstall(){
               <div id="obsAudioList" style="margin-top:8px;display:flex;flex-direction:column;gap:6px"></div>
             </div>
 
-            <!-- 소리산책 MP3 업로드 -->
+            <!-- 소리산책 녹음/업로드 -->
             <div style="margin-bottom:16px">
               <div style="font-size:11px;font-weight:900;color:var(--ink-soft);margin-bottom:8px">🎧 소리산책 (선택)</div>
+              <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
+                <button id="obsSoundRecBtn" onclick="toggleObsSoundWalkRecording()"
+                  style="background:#E07A3C;color:#fff;border:none;border-radius:999px;
+                  padding:9px 18px;font-family:inherit;font-size:13px;font-weight:800;cursor:pointer">
+                  🎙️ 지금 바로 녹음하기
+                </button>
+                <span id="obsSoundRecTimer" style="font-size:13px;font-weight:700;color:#E07A3C"></span>
+              </div>
               <label id="obsSoundLabel" style="display:flex;align-items:center;gap:12px;
                 border:2px dashed #E07A3C;border-radius:12px;padding:12px 16px;
                 cursor:pointer;background:#FFF8F2;color:#8A4A10">
@@ -1526,8 +1534,8 @@ function triggerPWAInstall(){
                   onchange="handleObsSoundUpload(this)" style="display:none">
                 <span style="font-size:24px">🎧</span>
                 <div>
-                  <div style="font-size:13px;font-weight:900" id="obsSoundLabelText">OO의 소리산책 — MP3 파일 선택</div>
-                  <div style="font-size:11px;color:#B5804A;margin-top:2px">MP3, WAV, OGG 모두 가능해요</div>
+                  <div style="font-size:13px;font-weight:900" id="obsSoundLabelText">또는 OO의 소리산책 — MP3 파일 선택</div>
+                  <div style="font-size:11px;color:#B5804A;margin-top:2px">외부 녹음기로 녹음했다면 여기로 업로드해요</div>
                 </div>
               </label>
               <div id="obsSoundPreview" style="margin-top:8px"></div>
@@ -1639,9 +1647,17 @@ function triggerPWAInstall(){
             <div id="teacherAudioList" style="margin-top:8px;display:flex;flex-direction:column;gap:6px"></div>
           </div>
 
-          <!-- 소리산책 MP3 -->
+          <!-- 소리산책 녹음/업로드 -->
           <div style="margin-bottom:16px">
             <div style="font-size:11px;font-weight:900;color:var(--ink-soft);margin-bottom:8px">🎧 소리산책 (선택)</div>
+            <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
+              <button id="teacherSoundRecBtn" onclick="toggleTeacherSoundWalkRecording()"
+                style="background:#E07A3C;color:#fff;border:none;border-radius:999px;
+                padding:9px 18px;font-family:inherit;font-size:13px;font-weight:800;cursor:pointer">
+                🎙️ 지금 바로 녹음하기
+              </button>
+              <span id="teacherSoundRecTimer" style="font-size:13px;font-weight:700;color:#E07A3C"></span>
+            </div>
             <label style="display:flex;align-items:center;gap:12px;
               border:2px dashed #E07A3C;border-radius:12px;padding:12px 16px;
               cursor:pointer;background:#FFF8F2;color:#8A4A10">
@@ -1649,8 +1665,8 @@ function triggerPWAInstall(){
                 onchange="handleTeacherSoundUpload(this)" style="display:none">
               <span style="font-size:24px">🎧</span>
               <div>
-                <div style="font-size:13px;font-weight:900">교사 소리산책 — MP3 파일 선택</div>
-                <div style="font-size:11px;color:#B5804A;margin-top:2px">MP3, WAV, OGG 모두 가능해요</div>
+                <div style="font-size:13px;font-weight:900">또는 교사 소리산책 — MP3 파일 선택</div>
+                <div style="font-size:11px;color:#B5804A;margin-top:2px">외부 녹음기로 녹음했다면 여기로 업로드해요</div>
               </div>
             </label>
             <div id="teacherSoundPreview" style="margin-top:8px"></div>
@@ -5059,58 +5075,6 @@ function downloadFullCSV(){
     csv += `${ldate},${l.studentId},${l.grade},"${l.activity}",${CAT[l.category]||l.category},${l.points}\n`;
   });
 
-  /* ─────────────────────────────────────────────
-     시트 9: 학생 관찰기록·메모 전체 원본
-  ───────────────────────────────────────────── */
-  csv += `\n[학생 관찰기록·메모 전체 원본]\n`;
-  csv += `날짜,이름,학년,구분,발견한 점/메모,느낀 점\n`;
-  const csvEsc = (t)=>`"${String(t||'').replace(/"/g,'""')}"`;
-  const allObsRows = [
-    ...observationLogs.map(o=>({date:o.date, studentId:o.studentId, type:'관찰기록', main:o.discover||'', sub:o.feeling||''})),
-    ...memos.map(m=>({date:m.date, studentId:m.studentId, type:'메모', main:m.text||'', sub:''}))
-  ].sort((a,b)=>a.date-b.date);
-  allObsRows.forEach(o=>{
-    const ld=o.date;
-    const ldate=`${ld.getFullYear()}-${String(ld.getMonth()+1).padStart(2,'0')}-${String(ld.getDate()).padStart(2,'0')}`;
-    const s = students.find(x=>x.id===o.studentId);
-    csv += `${ldate},${o.studentId},${s?s.grade:''},${o.type},${csvEsc(o.main)},${csvEsc(o.sub)}\n`;
-  });
-
-  /* ─────────────────────────────────────────────
-     시트 10: 인성검사(KEDI) 결과 원본
-  ───────────────────────────────────────────── */
-  csv += `\n[인성검사(KEDI) 결과 원본]\n`;
-  csv += `이름,학년,회차,제출여부,자기인식,협력소통,대인관계,윤리책임,평균\n`;
-  const kediAreasAll = ['자기인식 및 관리','협력적 소통','대인관계 및 공동체','윤리적 책임'];
-  const kediGetAvg = (d,area)=>{
-    if(!d || !d.submitted) return null;
-    const qs = KEDI_QUESTIONS.map((q,i)=>({...q,i})).filter(q=>q.area===area);
-    const vs = qs.map(q=>d[`q${q.i}`]).filter(v=>v);
-    return vs.length ? Math.round(vs.reduce((a,b)=>a+b,0)/vs.length*10)/10 : null;
-  };
-  students.forEach(s=>{
-    [1,2,3].forEach(round=>{
-      const d = kediData[`${s.id}_${round}`];
-      if(!d) return;
-      const areaAvgs = kediAreasAll.map(a=>kediGetAvg(d,a));
-      const valid = areaAvgs.filter(v=>v!==null);
-      const overall = valid.length ? (valid.reduce((a,b)=>a+b,0)/valid.length).toFixed(1) : '—';
-      csv += `${s.id},${s.grade},${round}회차,${d.submitted?'제출완료':'미제출'},`;
-      csv += `${areaAvgs.map(v=>v===null?'—':v).join(',')},${overall}\n`;
-    });
-  });
-
-  /* ─────────────────────────────────────────────
-     시트 11: 교사 관찰 기록 전체 원본
-  ───────────────────────────────────────────── */
-  csv += `\n[교사 관찰 기록 전체 원본]\n`;
-  csv += `날짜,작성 교사,대상 학생,관찰 내용,느낀 점\n`;
-  [...teacherObsLogs].sort((a,b)=>a.date-b.date).forEach(o=>{
-    const ld=o.date;
-    const ldate=`${ld.getFullYear()}-${String(ld.getMonth()+1).padStart(2,'0')}-${String(ld.getDate()).padStart(2,'0')}`;
-    csv += `${ldate},${csvEsc(o.teacherName)},${csvEsc(o.studentId)},${csvEsc(o.content)},${csvEsc(o.feeling)}\n`;
-  });
-
   /* ─────── 다운로드 ─────── */
   const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
   const a=document.createElement('a');
@@ -7157,6 +7121,116 @@ function handleTeacherSoundUpload(input){
         style="background:none;border:none;color:#E94F33;cursor:pointer;font-size:16px">🗑️</button>
     </div>`;
   }
+}
+
+/* ====== 소리산책 태블릿 직접 녹음 (학생용) ======
+   기존 지향성 마이크 → SD카드 분리 → 태블릿 업로드 절차 없이,
+   태블릿 마이크로 바로 녹음해서 obsSoundFile에 담는다(업로드와 동일하게 동작). */
+let soundWalkMediaRecorder = null;
+let soundWalkAudioChunks = [];
+let soundWalkRecording = false;
+let soundWalkRecInterval = null;
+let soundWalkRecSeconds = 0;
+
+function toggleObsSoundWalkRecording(){
+  if(!soundWalkRecording){ startObsSoundWalkRecording(); } else { stopObsSoundWalkRecording(); }
+}
+async function startObsSoundWalkRecording(){
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({audio:true});
+    soundWalkAudioChunks = [];
+    soundWalkMediaRecorder = new MediaRecorder(stream);
+    soundWalkMediaRecorder.ondataavailable = e=>{ if(e.data.size>0) soundWalkAudioChunks.push(e.data); };
+    soundWalkMediaRecorder.onstop = ()=>{
+      const blob = new Blob(soundWalkAudioChunks,{type:'audio/webm'});
+      const fileName = `소리산책_${new Date().toLocaleTimeString('ko-KR')}.webm`;
+      obsSoundFile = new File([blob], fileName, {type:'audio/webm'});
+      const url = URL.createObjectURL(obsSoundFile);
+      const preview = document.getElementById('obsSoundPreview');
+      if(preview){
+        preview.innerHTML = `<div style="background:#FFF8F2;border:1.5px solid #E07A3C;border-radius:10px;padding:8px 12px;display:flex;align-items:center;gap:8px">
+          <audio controls src="${url}" style="flex:1;height:32px"></audio>
+          <button onclick="obsSoundFile=null;document.getElementById('obsSoundPreview').innerHTML=''"
+            style="background:none;border:none;color:#E94F33;cursor:pointer;font-size:16px">🗑️</button>
+        </div>`;
+      }
+      stream.getTracks().forEach(t=>t.stop());
+    };
+    soundWalkMediaRecorder.start();
+    soundWalkRecording = true;
+    soundWalkRecSeconds = 0;
+    const btn = document.getElementById('obsSoundRecBtn');
+    const timer = document.getElementById('obsSoundRecTimer');
+    if(btn){ btn.textContent = '⏹️ 녹음 중지'; btn.style.background = '#E94F33'; }
+    soundWalkRecInterval = setInterval(()=>{
+      soundWalkRecSeconds++;
+      const m=Math.floor(soundWalkRecSeconds/60), s=soundWalkRecSeconds%60;
+      if(timer) timer.textContent = `${m}:${String(s).padStart(2,'0')}`;
+    },1000);
+  } catch(e){ alert('마이크 권한이 필요해요.'); }
+}
+function stopObsSoundWalkRecording(){
+  if(soundWalkMediaRecorder && soundWalkRecording){ soundWalkMediaRecorder.stop(); }
+  soundWalkRecording = false;
+  clearInterval(soundWalkRecInterval);
+  const btn = document.getElementById('obsSoundRecBtn');
+  const timer = document.getElementById('obsSoundRecTimer');
+  if(btn){ btn.textContent = '🎙️ 지금 바로 녹음하기'; btn.style.background = '#E07A3C'; }
+  if(timer) timer.textContent = '';
+}
+
+/* ====== 소리산책 태블릿 직접 녹음 (교사용) ====== */
+let teacherSoundWalkMediaRecorder = null;
+let teacherSoundWalkAudioChunks = [];
+let teacherSoundWalkRecording = false;
+let teacherSoundWalkRecInterval = null;
+let teacherSoundWalkRecSeconds = 0;
+
+function toggleTeacherSoundWalkRecording(){
+  if(!teacherSoundWalkRecording){ startTeacherSoundWalkRecording(); } else { stopTeacherSoundWalkRecording(); }
+}
+async function startTeacherSoundWalkRecording(){
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({audio:true});
+    teacherSoundWalkAudioChunks = [];
+    teacherSoundWalkMediaRecorder = new MediaRecorder(stream);
+    teacherSoundWalkMediaRecorder.ondataavailable = e=>{ if(e.data.size>0) teacherSoundWalkAudioChunks.push(e.data); };
+    teacherSoundWalkMediaRecorder.onstop = ()=>{
+      const blob = new Blob(teacherSoundWalkAudioChunks,{type:'audio/webm'});
+      const fileName = `교사_소리산책_${new Date().toLocaleTimeString('ko-KR')}.webm`;
+      teacherSoundFile = new File([blob], fileName, {type:'audio/webm'});
+      const url = URL.createObjectURL(teacherSoundFile);
+      const preview = document.getElementById('teacherSoundPreview');
+      if(preview){
+        preview.innerHTML = `<div style="background:#FFF8F2;border:1.5px solid #E07A3C;border-radius:10px;padding:8px 12px;display:flex;align-items:center;gap:8px">
+          <audio controls src="${url}" style="flex:1;height:32px"></audio>
+          <button onclick="teacherSoundFile=null;document.getElementById('teacherSoundPreview').innerHTML=''"
+            style="background:none;border:none;color:#E94F33;cursor:pointer;font-size:16px">🗑️</button>
+        </div>`;
+      }
+      stream.getTracks().forEach(t=>t.stop());
+    };
+    teacherSoundWalkMediaRecorder.start();
+    teacherSoundWalkRecording = true;
+    teacherSoundWalkRecSeconds = 0;
+    const btn = document.getElementById('teacherSoundRecBtn');
+    const timer = document.getElementById('teacherSoundRecTimer');
+    if(btn){ btn.textContent = '⏹️ 녹음 중지'; btn.style.background = '#E94F33'; }
+    teacherSoundWalkRecInterval = setInterval(()=>{
+      teacherSoundWalkRecSeconds++;
+      const m=Math.floor(teacherSoundWalkRecSeconds/60), s=teacherSoundWalkRecSeconds%60;
+      if(timer) timer.textContent = `${m}:${String(s).padStart(2,'0')}`;
+    },1000);
+  } catch(e){ alert('마이크 권한이 필요해요.'); }
+}
+function stopTeacherSoundWalkRecording(){
+  if(teacherSoundWalkMediaRecorder && teacherSoundWalkRecording){ teacherSoundWalkMediaRecorder.stop(); }
+  teacherSoundWalkRecording = false;
+  clearInterval(teacherSoundWalkRecInterval);
+  const btn = document.getElementById('teacherSoundRecBtn');
+  const timer = document.getElementById('teacherSoundRecTimer');
+  if(btn){ btn.textContent = '🎙️ 지금 바로 녹음하기'; btn.style.background = '#E07A3C'; }
+  if(timer) timer.textContent = '';
 }
 
 function toggleTeacherRecording(){
