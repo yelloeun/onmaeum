@@ -1383,15 +1383,20 @@ function triggerPWAInstall(){
       <!-- 왼쪽: 내 이름 눌러서 업로드 -->
       <div class="sound-card">
         <h3>🎙️ 내 소리 업로드</h3>
-        <p class="lead">이름을 눌러 내가 녹음한 소리를 올려요</p>
+        <p class="lead">이름을 누르고, 바로 녹음하거나 파일을 올려요</p>
         <div class="sound-pick" id="soundPick"></div>
         <div class="sound-upload-area" id="soundUploadArea" style="display:none">
           <div class="sup-name" id="supName">누구의 소리?</div>
-          <label class="sup-btn" for="soundFileInput">
-            🎵 MP3 파일 선택하기
+          <button type="button" class="sup-btn" id="soundWalkMainRecBtn" onclick="toggleSoundWalkMainRecording()"
+            style="background:#E07A3C;color:#fff;border:none;cursor:pointer;width:100%">
+            🎙️ 지금 바로 녹음하기
+          </button>
+          <div class="sup-hint" id="soundWalkMainRecTimer" style="font-weight:800;color:#E07A3C"></div>
+          <label class="sup-btn" for="soundFileInput" style="margin-top:8px">
+            🎵 또는 MP3 파일 선택하기
             <input type="file" id="soundFileInput" accept="audio/mp3,audio/mpeg,audio/wav,audio/ogg,audio/*" style="display:none" onchange="handleSoundUpload(event)">
           </label>
-          <div class="sup-hint">MP3, WAV, OGG 모두 가능해요</div>
+          <div class="sup-hint">외부 녹음기로 녹음했다면 파일로 올려도 돼요</div>
           <div class="sup-status" id="supStatus"></div>
         </div>
       </div>
@@ -7762,9 +7767,14 @@ function handleSoundUpload(ev){
   if(file.size > 30*1024*1024){
     showSoundStatus('파일이 너무 커요 (최대 30MB)','err'); return;
   }
+  saveSoundEntry(file);
+  ev.target.value='';
+}
+
+/* 업로드/녹음 공통 저장 로직 */
+function saveSoundEntry(file){
   const url = URL.createObjectURL(file);
   const s = students.find(x=>x.id===soundPickSel);
-  // 기존 있으면 교체
   const idx = soundFiles.findIndex(f=>f.id===soundPickSel);
   const entry = {
     id: soundPickSel,
@@ -7777,13 +7787,62 @@ function handleSoundUpload(ev){
   if(idx>=0) soundFiles[idx]=entry;
   else        soundFiles.push(entry);
 
-  showSoundStatus(`✅ ${s.id}의 소리가 업로드됐어요!`,'ok');
-  ev.target.value='';
+  showSoundStatus(`✅ ${s.id}의 소리가 저장됐어요!`,'ok');
   renderSoundPick();
   renderSoundList();
-  // 교사분석 소리 카운트 갱신
   const sc = document.getElementById('tSoundCount');
   if(sc) sc.textContent = soundFiles.length + '건';
+}
+
+/* ====== 소리산책 메인 화면 — 태블릿 직접 녹음 ======
+   지향성 마이크 → SD카드 분리 → 태블릿 업로드 절차 없이,
+   태블릿 마이크로 바로 녹음해서 saveSoundEntry()로 저장한다. */
+let soundWalkMainMediaRecorder = null;
+let soundWalkMainAudioChunks = [];
+let soundWalkMainRecording = false;
+let soundWalkMainRecInterval = null;
+let soundWalkMainRecSeconds = 0;
+
+function toggleSoundWalkMainRecording(){
+  if(!soundPickSel){
+    showSoundStatus('먼저 이름을 선택해주세요!','err'); return;
+  }
+  if(!soundWalkMainRecording){ startSoundWalkMainRecording(); } else { stopSoundWalkMainRecording(); }
+}
+async function startSoundWalkMainRecording(){
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({audio:true});
+    soundWalkMainAudioChunks = [];
+    soundWalkMainMediaRecorder = new MediaRecorder(stream);
+    soundWalkMainMediaRecorder.ondataavailable = e=>{ if(e.data.size>0) soundWalkMainAudioChunks.push(e.data); };
+    soundWalkMainMediaRecorder.onstop = ()=>{
+      const blob = new Blob(soundWalkMainAudioChunks,{type:'audio/webm'});
+      const fileName = `소리산책_${new Date().toLocaleTimeString('ko-KR')}.webm`;
+      const file = new File([blob], fileName, {type:'audio/webm'});
+      saveSoundEntry(file);
+      stream.getTracks().forEach(t=>t.stop());
+    };
+    soundWalkMainMediaRecorder.start();
+    soundWalkMainRecording = true;
+    soundWalkMainRecSeconds = 0;
+    const btn = document.getElementById('soundWalkMainRecBtn');
+    const timer = document.getElementById('soundWalkMainRecTimer');
+    if(btn){ btn.textContent = '⏹️ 녹음 중지'; btn.style.background = '#E94F33'; }
+    soundWalkMainRecInterval = setInterval(()=>{
+      soundWalkMainRecSeconds++;
+      const m=Math.floor(soundWalkMainRecSeconds/60), s=soundWalkMainRecSeconds%60;
+      if(timer) timer.textContent = `🔴 ${m}:${String(s).padStart(2,'0')}`;
+    },1000);
+  } catch(e){ showSoundStatus('마이크 권한이 필요해요.','err'); }
+}
+function stopSoundWalkMainRecording(){
+  if(soundWalkMainMediaRecorder && soundWalkMainRecording){ soundWalkMainMediaRecorder.stop(); }
+  soundWalkMainRecording = false;
+  clearInterval(soundWalkMainRecInterval);
+  const btn = document.getElementById('soundWalkMainRecBtn');
+  const timer = document.getElementById('soundWalkMainRecTimer');
+  if(btn){ btn.textContent = '🎙️ 지금 바로 녹음하기'; btn.style.background = '#E07A3C'; }
+  if(timer) timer.textContent = '';
 }
 
 function showSoundStatus(msg, cls){
