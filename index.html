@@ -2574,7 +2574,7 @@ function triggerPWAInstall(){
   <div class="act-confirm">
     <div class="ac-ico" id="acIco">🌱</div>
     <div class="ac-q" id="acQ">오늘 이 활동을 했나요?</div>
-    <button class="ac-yes" id="acYes" onclick="this.disabled=true; this.style.opacity='0.5'; confirmYes()">네! 했어요!</button>
+    <button class="ac-yes" id="acYes" onclick="confirmYes()">네! 했어요!</button>
     <button class="ac-no"  id="acNo"  onclick="closeActConfirm()">아직요.. 다음에 할게요</button>
   </div>
 </div>
@@ -3203,7 +3203,10 @@ function syncToSheet(log){
 }
 
 // Firebase에서 전체 데이터 불러오기
+let _loadFromSheetLock = false;
 function loadFromSheet(){
+  if(_loadFromSheetLock){ console.warn('loadFromSheet 이미 실행 중, 건너뜀'); return; }
+  _loadFromSheetLock = true;
   updateSyncStatus('☁️ 데이터 불러오는 중...');
 
   if(!_fbDB){
@@ -3305,9 +3308,11 @@ function loadFromSheet(){
     updateSyncStatus(`✅ ${Object.keys(fbLogs).length}건 동기화 완료`);
     setTimeout(()=>updateSyncStatus(''), 3000);
     console.log(`✅ logs:${Object.keys(fbLogs).length} kedi:${Object.keys(fbKedi).length} memos:${Object.keys(fbMemos).length} obs:${Object.keys(fbObs).length}`);
+    _loadFromSheetLock = false;
 
   }).catch(e=>{
     console.error('loadFromSheet 오류:', e);
+    _loadFromSheetLock = false;
     loadLogsFromDB().then(()=>{ updateSyncStatus(''); });
   });
 }
@@ -7528,23 +7533,22 @@ function closeActConfirm(){
   document.getElementById('actConfirmBg').classList.remove('show');
   confirmItemIdx = null;
   const yesBtn = document.getElementById('acYes');
-  if(yesBtn){ yesBtn.disabled=false; yesBtn.style.opacity=''; }
+  if(yesBtn){ yesBtn.disabled=false; yesBtn.style.opacity=''; yesBtn.style.pointerEvents=''; }
 }
 let _confirmYesLock = false;
 function confirmYes(){
   if(confirmItemIdx === null) return;
-  if(_confirmYesLock) return; // 중복 클릭 방지
+  if(_confirmYesLock) return;
   _confirmYesLock = true;
 
+  // 버튼 즉시 비활성화 (시각적으로도 막기)
   const yesBtn = document.getElementById('acYes');
-  if(yesBtn) yesBtn.style.pointerEvents = 'none';
+  if(yesBtn){ yesBtn.disabled=true; yesBtn.style.opacity='0.4'; yesBtn.style.pointerEvents='none'; }
+
+  setTimeout(()=>{ _confirmYesLock=false; }, 2000);
 
   const idx = confirmItemIdx;
-  confirmItemIdx = null; // 즉시 초기화 — 재진입 차단
-  setTimeout(()=>{
-    _confirmYesLock = false;
-    if(yesBtn) yesBtn.style.pointerEvents = '';
-  }, 1200);
+  confirmItemIdx = null; // 즉시 초기화
 
   const a = modalItems[idx];
   // 기록 저장 (횟수 누적)
