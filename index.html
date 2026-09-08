@@ -3216,8 +3216,21 @@ function loadFromSheet(){
     _fbDB.ref('logs').once('value'),
     _fbDB.ref('kedi').once('value'),
     _fbDB.ref('memos').once('value'),
-    _fbDB.ref('observations').once('value')
-  ]).then(([logsSnap, kediSnap, memosSnap, obsSnap])=>{
+    _fbDB.ref('observations').once('value'),
+    _fbDB.ref('soundwalks').once('value')
+  ]).then(([logsSnap, kediSnap, memosSnap, obsSnap, soundSnap])=>{
+
+    // ── soundwalks 로드 ──
+    const swData = soundSnap?.val()||{};
+    Object.entries(swData).forEach(([k,v])=>{
+      if(!v?.studentId||!v?.url) return;
+      const s = students.find(x=>x.id===v.studentId);
+      if(!s) return;
+      const existing = soundFiles.findIndex(f=>f.id===v.studentId);
+      const entry = {id:v.studentId, name:s.id, emoji:s.emoji, fileName:v.name||'소리산책', url:v.url, uploadedAt:new Date(v.ts||Date.now())};
+      if(existing>=0) soundFiles[existing]=entry;
+      else soundFiles.push(entry);
+    });
 
     // ── 1. 점수 로그 ──
     const fbLogs = logsSnap.val() || {};
@@ -6448,7 +6461,20 @@ async function saveSoundwalkOnly(){
     const soundUrl = await uploadToCloudinary(dataUrl, `soundwalk/${obsPickSel}`).catch(()=>dataUrl);
 
     const now = new Date();
-    const entry = { studentId: obsPickSel, url: soundUrl, name: obsSoundFile.name, date: now };
+    const s = students.find(x=>x.id===obsPickSel);
+    const entry = {
+      id: obsPickSel,
+      name: s?.id||obsPickSel,
+      emoji: s?.emoji||'🎵',
+      fileName: obsSoundFile.name,
+      url: soundUrl,
+      uploadedAt: now
+    };
+
+    // soundFiles 배열에 추가 (교사분석/소리산책 탭에 즉시 반영)
+    const existIdx = soundFiles.findIndex(f=>f.id===obsPickSel);
+    if(existIdx>=0) soundFiles[existIdx] = entry;
+    else soundFiles.push(entry);
 
     // Firebase 저장
     if(typeof _fbDB !== 'undefined' && _fbDB){
@@ -6457,6 +6483,11 @@ async function saveSoundwalkOnly(){
         name: obsSoundFile.name, ts: now.getTime()
       }).catch(()=>{});
     }
+
+    // 교사분석 카운트 갱신
+    const sc = document.getElementById('tSoundCount');
+    if(sc) sc.textContent = soundFiles.length + '건';
+    renderSoundListFor('teacherSoundList','teacherAudio',null);
 
     // 초기화
     obsSoundFile = null;
