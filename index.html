@@ -1087,7 +1087,7 @@ function triggerPWAInstall(){
       <p style="color:var(--ink-soft);margin:0;font-size:13px">4월~10월 실천 데이터를 학생·날짜·활동별로 분석해요</p>
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
-      <button onclick="openReportModal('all-csv')" style="
+      <button onclick="downloadAllCSVDirect()" style="
         background:linear-gradient(135deg,#3F8AA6,#5B9FE8);color:#fff;border:none;
         border-radius:12px;padding:11px 18px;font-family:inherit;font-size:13px;
         font-weight:800;cursor:pointer;box-shadow:0 3px 10px rgba(63,138,166,.3)
@@ -2056,7 +2056,7 @@ function triggerPWAInstall(){
             font-weight:700;cursor:pointer;text-align:center;line-height:1.4">
             📥 월간 리포트<br><span style="font-size:10px;opacity:.85">CSV</span>
           </button>
-          <button onclick="openReportModal('all-csv')" style="
+          <button onclick="downloadAllCSVDirect()" style="
             background:linear-gradient(135deg,#5B8FA8,#3F7090);color:#fff;border:none;
             border-radius:12px;padding:12px 8px;font-family:inherit;font-size:12px;
             font-weight:700;cursor:pointer;text-align:center;line-height:1.4">
@@ -5418,18 +5418,19 @@ let reportSelectedMonth = null;
 
 
 async function downloadAllCSVDirect(){
-  const btn = document.querySelector('[onclick="openReportModal(\'all-csv\')"]');
+  const btn = document.querySelector('[onclick="downloadAllCSVDirect()"]');
   if(btn){ btn.textContent='⏳ 불러오는 중...'; btn.style.opacity='0.6'; }
 
   try {
     // Firebase에서 직접 최신 데이터 읽기
-    const [obsSnap, memosSnap, teacherSnap] = await Promise.all([
+    const [obsSnap, memosSnap, teacherSnap, soundSnap] = await Promise.all([
       _fbDB.ref('observations').once('value'),
       _fbDB.ref('memos').once('value'),
       _fbDB.ref('teacherObs').once('value'),
+      _fbDB.ref('soundwalks').once('value'),
     ]);
 
-    // 관찰기록 통합
+    // 관찰기록 통합 (observations + memos)
     const allObsRows = [];
     const obsData = obsSnap.val()||{};
     Object.entries(obsData).forEach(([k,v])=>{
@@ -5478,6 +5479,20 @@ async function downloadAllCSVDirect(){
     });
     teacherRows.sort((a,b)=>a.date-b.date);
 
+    // 소리산책 기록
+    const soundRows = [];
+    const soundData = soundSnap.val()||{};
+    Object.entries(soundData).forEach(([k,v])=>{
+      if(!v) return;
+      soundRows.push({
+        date: new Date(v.ts||Date.now()),
+        studentId: v.studentId||'',
+        fileName: v.name||'',
+        url: v.url||''
+      });
+    });
+    soundRows.sort((a,b)=>a.date-b.date);
+
     // 소리 키워드
     const soundKeywords = [
       '소리','경청','들었','들어','들리','귀','바람','새소리','물소리','빗소리',
@@ -5489,6 +5504,7 @@ async function downloadAllCSVDirect(){
     const ds = `${new Date().getFullYear()}-${new Date().getMonth()+1}-${new Date().getDate()}`;
     let csv = '\uFEFF'; // BOM
 
+    // ── 아이 관찰 기록 전체 ──
     csv += `[아이 관찰 기록 · 질적 자료 (전체 기간 · Firebase 직접 추출)]\n`;
     csv += `총 ${allObsRows.length}건\n`;
     csv += `날짜,이름,학년,발견한 것 / 관찰 내용,느낌&소감,사진첨부,음성첨부\n`;
@@ -5502,6 +5518,7 @@ async function downloadAllCSVDirect(){
       csv += `${odate},${o.studentId},${o.grade},"${discover}","${feeling}",${hasPic},${hasAudio}\n`;
     });
 
+    // ── 소리 관련 필터 ──
     csv += `\n[소리 영역 · 경청 관련 관찰 기록]\n`;
     const soundFiltered = allObsRows.filter(o=>{
       const txt = ((o.discover||'')+(o.feeling||'')).toLowerCase();
@@ -5518,7 +5535,9 @@ async function downloadAllCSVDirect(){
     });
     if(soundFiltered.length===0) csv += `(소리 관련 키워드 포함 기록 없음)\n`;
 
+    // ── 교사 관찰기록 ──
     csv += `\n[교사 관찰 기록]\n`;
+    csv += `총 ${teacherRows.length}건\n`;
     csv += `날짜,교사명,관찰 학생,관찰 내용,느낀 점\n`;
     teacherRows.forEach(o=>{
       const od = o.date;
@@ -5528,6 +5547,17 @@ async function downloadAllCSVDirect(){
       csv += `${odate},${o.teacherName},${o.studentId},"${content}","${feeling}"\n`;
     });
     if(teacherRows.length===0) csv += `(교사 관찰 기록 없음)\n`;
+
+    // ── 소리산책 기록 ──
+    csv += `\n[소리산책 녹음 기록]\n`;
+    csv += `총 ${soundRows.length}건\n`;
+    csv += `날짜,학생,파일명,URL\n`;
+    soundRows.forEach(o=>{
+      const od = o.date;
+      const odate = `${od.getFullYear()}-${String(od.getMonth()+1).padStart(2,'0')}-${String(od.getDate()).padStart(2,'0')}`;
+      csv += `${odate},${o.studentId},"${o.fileName}","${o.url}"\n`;
+    });
+    if(soundRows.length===0) csv += `(소리산책 녹음 기록 없음)\n`;
 
     const blob = new Blob([csv], {type:'text/csv;charset=utf-8'});
     const a = document.createElement('a');
@@ -5543,7 +5573,6 @@ async function downloadAllCSVDirect(){
     if(btn){ btn.textContent='📥 전체 데이터 CSV'; btn.style.opacity=''; }
   }
 }
-
 function downloadAllPDFDirect(){
   // 통계 데이터 수집
   const actLogs2 = allLogs.filter(l=>l.type==='activity');
