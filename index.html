@@ -5007,37 +5007,105 @@ function downloadFullCSV(){
   });
 
   /* ─────────────────────────────────────────────
-     시트 9: 아이 관찰 기록 (질적 자료)
+     시트 9: 아이 관찰 기록 (질적 자료) — 전체 기간
   ───────────────────────────────────────────── */
-  csv += `\n[아이 관찰 기록 · 질적 자료]\n`;
-  csv += `날짜,이름,발견한 것 / 관찰 내용,느낌\n`;
-  const sortedObs = [...observationLogs].sort((a,b)=>new Date(a.date)-new Date(b.date));
-  sortedObs.forEach(o=>{
-    const od = new Date(o.date);
-    const odate = `${od.getFullYear()}-${String(od.getMonth()+1).padStart(2,'0')}-${String(od.getDate()).padStart(2,'0')}`;
-    const discover = (o.discover||o.text||'').replace(/"/g,'""');
-    const feeling = (o.feeling||'').replace(/"/g,'""');
-    csv += `${odate},${o.studentId},"${discover}","${feeling}"\n`;
-  });
+  csv += `\n[아이 관찰 기록 · 질적 자료 (전체 기간)]\n`;
+  csv += `날짜,이름,학년,발견한 것 / 관찰 내용,느낌&소감,사진첨부,음성첨부\n`;
+
+  // observations + memos 모두 합치기
+  const allObsForCSV = [];
+
+  // observations (discover + feeling 분리)
+  if(typeof _fbDB !== 'undefined' && _fbDB){
+    // 이미 로드된 observationLogs 사용
+    observationLogs.forEach(o=>{
+      const s2 = students.find(x=>x.id===o.studentId);
+      allObsForCSV.push({
+        date: o.date instanceof Date ? o.date : new Date(o.date),
+        studentId: o.studentId,
+        grade: s2?.grade||'',
+        discover: o.discover||o.text||'',
+        feeling: o.feeling||'',
+        photos: o.photos||[],
+        audio: o.audio||[]
+      });
+    });
+    // memos (text만 있는 경우)
+    memos.filter(m=>m.source==='memos').forEach(m=>{
+      const s2 = students.find(x=>x.id===m.studentId);
+      allObsForCSV.push({
+        date: m.date instanceof Date ? m.date : new Date(m.date),
+        studentId: m.studentId,
+        grade: s2?.grade||'',
+        discover: m.text||'',
+        feeling: '',
+        photos: m.photos||[],
+        audio: m.audio||[]
+      });
+    });
+  }
+
+  // 날짜순 정렬
+  allObsForCSV.sort((a,b)=>a.date-b.date);
+
+  if(allObsForCSV.length===0){
+    csv += `(저장된 관찰 기록 없음)\n`;
+  } else {
+    allObsForCSV.forEach(o=>{
+      const od = o.date;
+      const odate = `${od.getFullYear()}-${String(od.getMonth()+1).padStart(2,'0')}-${String(od.getDate()).padStart(2,'0')}`;
+      const discover = (o.discover||'').replace(/"/g,'""').replace(/\n/g,' ');
+      const feeling  = (o.feeling||'').replace(/"/g,'""').replace(/\n/g,' ');
+      const hasPic   = o.photos?.length>0 ? `사진${o.photos.length}장` : '';
+      const hasAudio = o.audio?.length>0 ? `음성${o.audio.length}개` : '';
+      csv += `${odate},${o.studentId},${o.grade},"${discover}","${feeling}",${hasPic},${hasAudio}\n`;
+    });
+    csv += `\n총 ${allObsForCSV.length}건\n`;
+  }
 
   /* ─────────────────────────────────────────────
-     시트 10: 소리 영역 관찰 기록 (경청 질적 자료)
+     시트 10: 소리 영역 · 경청 관련 (키워드 확장 + 전체 포함)
   ───────────────────────────────────────────── */
-  csv += `\n[소리 영역 · 경청 관련 관찰 기록]\n`;
-  csv += `날짜,이름,관찰 내용,느낌,비고\n`;
-  const soundKeywords = ['소리','경청','들','귀','자연소리','바람','새','물','음악','산책','소리산책','도슨트'];
-  const soundObs = sortedObs.filter(o=>{
-    const txt = ((o.discover||o.text||'')+(o.feeling||'')).toLowerCase();
+  csv += `\n[소리 영역 · 경청 관련 관찰 기록 (키워드 필터 + 전체 목록)]\n`;
+  csv += `※ 키워드 필터: 소리, 경청, 들었어요, 귀, 바람, 새, 물소리, 사운드, 조용, 시끄러, 음악, 노래, 울음, 벌레, 풀벌레, 빗소리, 천둥, 파도, 속삭, 웅성\n\n`;
+  csv += `[소리 관련 기록만]\n`;
+  csv += `날짜,이름,학년,발견한 것 / 관찰 내용,느낌&소감\n`;
+
+  const soundKeywords = [
+    '소리','경청','들었','들어','귀','바람','새소리','물소리','빗소리','천둥',
+    '사운드','조용','시끄','음악','노래','울음','벌레','풀벌레','파도','속삭',
+    '웅성','뚝뚝','쨍','쏴','윙윙','딱딱','사각','바스락','짹','꿀꿀','개굴',
+    '청각','들리','소리가 나','소리를','소리는','소리도','소리에','소리로'
+  ];
+
+  const soundFiltered = allObsForCSV.filter(o=>{
+    const txt = ((o.discover||'')+(o.feeling||'')).toLowerCase();
     return soundKeywords.some(k=>txt.includes(k));
   });
-  soundObs.forEach(o=>{
-    const od = new Date(o.date);
+
+  if(soundFiltered.length===0){
+    csv += `(소리 관련 키워드 포함 기록 없음 — 아래 전체 목록 참고)\n`;
+  } else {
+    soundFiltered.forEach(o=>{
+      const od = o.date;
+      const odate = `${od.getFullYear()}-${String(od.getMonth()+1).padStart(2,'0')}-${String(od.getDate()).padStart(2,'0')}`;
+      const discover = (o.discover||'').replace(/"/g,'""').replace(/\n/g,' ');
+      const feeling  = (o.feeling||'').replace(/"/g,'""').replace(/\n/g,' ');
+      csv += `${odate},${o.studentId},${o.grade},"${discover}","${feeling}"\n`;
+    });
+    csv += `\n소리 관련 기록 ${soundFiltered.length}건\n`;
+  }
+
+  // 필터 없이 전체도 포함 (직접 검토용)
+  csv += `\n[전체 관찰 기록 (필터 없음 — 직접 검토용)]\n`;
+  csv += `날짜,이름,학년,발견한 것 / 관찰 내용,느낌&소감\n`;
+  allObsForCSV.forEach(o=>{
+    const od = o.date;
     const odate = `${od.getFullYear()}-${String(od.getMonth()+1).padStart(2,'0')}-${String(od.getDate()).padStart(2,'0')}`;
-    const discover = (o.discover||o.text||'').replace(/"/g,'""');
-    const feeling = (o.feeling||'').replace(/"/g,'""');
-    csv += `${odate},${o.studentId},"${discover}","${feeling}",소리관련\n`;
+    const discover = (o.discover||'').replace(/"/g,'""').replace(/\n/g,' ');
+    const feeling  = (o.feeling||'').replace(/"/g,'""').replace(/\n/g,' ');
+    csv += `${odate},${o.studentId},${o.grade},"${discover}","${feeling}"\n`;
   });
-  if(soundObs.length===0) csv += `(소리 관련 키워드 포함 관찰 기록 없음)\n`;
 
   /* ─────────────────────────────────────────────
      시트 11: 교사 관찰 기록 (질적 자료)
