@@ -5006,6 +5006,65 @@ function downloadFullCSV(){
     csv += `${ldate},${l.studentId},${l.grade},"${l.activity}",${CAT[l.category]||l.category},${l.points}\n`;
   });
 
+  /* ─────────────────────────────────────────────
+     시트 9: 아이 관찰 기록 (질적 자료)
+  ───────────────────────────────────────────── */
+  csv += `\n[아이 관찰 기록 · 질적 자료]\n`;
+  csv += `날짜,이름,발견한 것 / 관찰 내용,느낌\n`;
+  const sortedObs = [...observationLogs].sort((a,b)=>new Date(a.date)-new Date(b.date));
+  sortedObs.forEach(o=>{
+    const od = new Date(o.date);
+    const odate = `${od.getFullYear()}-${String(od.getMonth()+1).padStart(2,'0')}-${String(od.getDate()).padStart(2,'0')}`;
+    const discover = (o.discover||o.text||'').replace(/"/g,'""');
+    const feeling = (o.feeling||'').replace(/"/g,'""');
+    csv += `${odate},${o.studentId},"${discover}","${feeling}"\n`;
+  });
+
+  /* ─────────────────────────────────────────────
+     시트 10: 소리 영역 관찰 기록 (경청 질적 자료)
+  ───────────────────────────────────────────── */
+  csv += `\n[소리 영역 · 경청 관련 관찰 기록]\n`;
+  csv += `날짜,이름,관찰 내용,느낌,비고\n`;
+  const soundKeywords = ['소리','경청','들','귀','자연소리','바람','새','물','음악','산책','소리산책','도슨트'];
+  const soundObs = sortedObs.filter(o=>{
+    const txt = ((o.discover||o.text||'')+(o.feeling||'')).toLowerCase();
+    return soundKeywords.some(k=>txt.includes(k));
+  });
+  soundObs.forEach(o=>{
+    const od = new Date(o.date);
+    const odate = `${od.getFullYear()}-${String(od.getMonth()+1).padStart(2,'0')}-${String(od.getDate()).padStart(2,'0')}`;
+    const discover = (o.discover||o.text||'').replace(/"/g,'""');
+    const feeling = (o.feeling||'').replace(/"/g,'""');
+    csv += `${odate},${o.studentId},"${discover}","${feeling}",소리관련\n`;
+  });
+  if(soundObs.length===0) csv += `(소리 관련 키워드 포함 관찰 기록 없음)\n`;
+
+  /* ─────────────────────────────────────────────
+     시트 11: 교사 관찰 기록 (질적 자료)
+  ───────────────────────────────────────────── */
+  csv += `\n[교사 관찰 기록 · 질적 자료]\n`;
+  csv += `날짜,교사명,관찰 학생,관찰 내용,느낀 점\n`;
+  [...teacherObsLogs].sort((a,b)=>new Date(a.date)-new Date(b.date)).forEach(o=>{
+    const od = new Date(o.date);
+    const odate = `${od.getFullYear()}-${String(od.getMonth()+1).padStart(2,'0')}-${String(od.getDate()).padStart(2,'0')}`;
+    const content = (o.content||'').replace(/"/g,'""');
+    const feeling = (o.feeling||'').replace(/"/g,'""');
+    csv += `${odate},${o.teacherName||''},${o.studentId},"${content}","${feeling}"\n`;
+  });
+  if(teacherObsLogs.length===0) csv += `(교사 관찰 기록 없음)\n`;
+
+  /* ─────────────────────────────────────────────
+     시트 12: 소리산책 기록
+  ───────────────────────────────────────────── */
+  csv += `\n[소리산책 기록]\n`;
+  csv += `업로드일,학생,파일명,URL\n`;
+  soundFiles.forEach(f=>{
+    const ud = f.uploadedAt ? new Date(f.uploadedAt) : new Date();
+    const udate = `${ud.getFullYear()}-${String(ud.getMonth()+1).padStart(2,'0')}-${String(ud.getDate()).padStart(2,'0')}`;
+    csv += `${udate},${f.name},"${f.fileName||''}","${f.url||''}"\n`;
+  });
+  if(soundFiles.length===0) csv += `(소리산책 파일 없음)\n`;
+
   /* ─────── 다운로드 ─────── */
   const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
   const a=document.createElement('a');
