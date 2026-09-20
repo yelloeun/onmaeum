@@ -5417,6 +5417,133 @@ let reportSelectedWeek = null;
 let reportSelectedMonth = null;
 
 
+async function downloadAllCSVDirect(){
+  const btn = document.querySelector('[onclick="openReportModal(\'all-csv\')"]');
+  if(btn){ btn.textContent='⏳ 불러오는 중...'; btn.style.opacity='0.6'; }
+
+  try {
+    // Firebase에서 직접 최신 데이터 읽기
+    const [obsSnap, memosSnap, teacherSnap] = await Promise.all([
+      _fbDB.ref('observations').once('value'),
+      _fbDB.ref('memos').once('value'),
+      _fbDB.ref('teacherObs').once('value'),
+    ]);
+
+    // 관찰기록 통합
+    const allObsRows = [];
+    const obsData = obsSnap.val()||{};
+    Object.entries(obsData).forEach(([k,v])=>{
+      if(!v?.studentId) return;
+      const s2 = students.find(x=>x.id===v.studentId);
+      allObsRows.push({
+        date: new Date(v.ts||v.date||Date.now()),
+        studentId: v.studentId,
+        grade: s2?.grade||'',
+        discover: v.discover||v.text||'',
+        feeling: v.feeling||'',
+        photos: v.photos||[],
+        audio: v.audio||[],
+        source: 'observations'
+      });
+    });
+    const memosData = memosSnap.val()||{};
+    Object.entries(memosData).forEach(([k,v])=>{
+      if(!v?.studentId) return;
+      const s2 = students.find(x=>x.id===v.studentId);
+      allObsRows.push({
+        date: new Date(v.ts||v.date||Date.now()),
+        studentId: v.studentId,
+        grade: s2?.grade||'',
+        discover: v.text||'',
+        feeling: '',
+        photos: v.photos||[],
+        audio: v.audio||[],
+        source: 'memos'
+      });
+    });
+    allObsRows.sort((a,b)=>a.date-b.date);
+
+    // 교사 관찰기록
+    const teacherRows = [];
+    const teacherData = teacherSnap.val()||{};
+    Object.entries(teacherData).forEach(([k,v])=>{
+      if(!v) return;
+      teacherRows.push({
+        date: new Date(v.ts||Date.now()),
+        teacherName: v.teacherName||'',
+        studentId: v.studentId||'',
+        content: v.content||'',
+        feeling: v.feeling||''
+      });
+    });
+    teacherRows.sort((a,b)=>a.date-b.date);
+
+    // 소리 키워드
+    const soundKeywords = [
+      '소리','경청','들었','들어','들리','귀','바람','새소리','물소리','빗소리',
+      '천둥','사운드','조용','시끄','음악','노래','울음','벌레','풀벌레','파도',
+      '속삭','웅성','뚝뚝','쨍','쏴','윙윙','딱딱','사각','바스락','짹','청각',
+      '소리가 나','소리를','소리는','소리도','소리에','소리로','귀에'
+    ];
+
+    const ds = `${new Date().getFullYear()}-${new Date().getMonth()+1}-${new Date().getDate()}`;
+    let csv = '\uFEFF'; // BOM
+
+    csv += `[아이 관찰 기록 · 질적 자료 (전체 기간 · Firebase 직접 추출)]\n`;
+    csv += `총 ${allObsRows.length}건\n`;
+    csv += `날짜,이름,학년,발견한 것 / 관찰 내용,느낌&소감,사진첨부,음성첨부\n`;
+    allObsRows.forEach(o=>{
+      const od = o.date;
+      const odate = `${od.getFullYear()}-${String(od.getMonth()+1).padStart(2,'0')}-${String(od.getDate()).padStart(2,'0')}`;
+      const discover = (o.discover||'').replace(/"/g,'""').replace(/\n/g,' ');
+      const feeling  = (o.feeling||'').replace(/"/g,'""').replace(/\n/g,' ');
+      const hasPic   = o.photos?.length>0 ? `사진${o.photos.length}장` : '';
+      const hasAudio = o.audio?.length>0 ? `음성${o.audio.length}개` : '';
+      csv += `${odate},${o.studentId},${o.grade},"${discover}","${feeling}",${hasPic},${hasAudio}\n`;
+    });
+
+    csv += `\n[소리 영역 · 경청 관련 관찰 기록]\n`;
+    const soundFiltered = allObsRows.filter(o=>{
+      const txt = ((o.discover||'')+(o.feeling||'')).toLowerCase();
+      return soundKeywords.some(k=>txt.includes(k));
+    });
+    csv += `소리 관련 기록 ${soundFiltered.length}건\n`;
+    csv += `날짜,이름,학년,발견한 것 / 관찰 내용,느낌&소감\n`;
+    soundFiltered.forEach(o=>{
+      const od = o.date;
+      const odate = `${od.getFullYear()}-${String(od.getMonth()+1).padStart(2,'0')}-${String(od.getDate()).padStart(2,'0')}`;
+      const discover = (o.discover||'').replace(/"/g,'""').replace(/\n/g,' ');
+      const feeling  = (o.feeling||'').replace(/"/g,'""').replace(/\n/g,' ');
+      csv += `${odate},${o.studentId},${o.grade},"${discover}","${feeling}"\n`;
+    });
+    if(soundFiltered.length===0) csv += `(소리 관련 키워드 포함 기록 없음)\n`;
+
+    csv += `\n[교사 관찰 기록]\n`;
+    csv += `날짜,교사명,관찰 학생,관찰 내용,느낀 점\n`;
+    teacherRows.forEach(o=>{
+      const od = o.date;
+      const odate = `${od.getFullYear()}-${String(od.getMonth()+1).padStart(2,'0')}-${String(od.getDate()).padStart(2,'0')}`;
+      const content = (o.content||'').replace(/"/g,'""').replace(/\n/g,' ');
+      const feeling  = (o.feeling||'').replace(/"/g,'""').replace(/\n/g,' ');
+      csv += `${odate},${o.teacherName},${o.studentId},"${content}","${feeling}"\n`;
+    });
+    if(teacherRows.length===0) csv += `(교사 관찰 기록 없음)\n`;
+
+    const blob = new Blob([csv], {type:'text/csv;charset=utf-8'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `온마음_관찰기록_${ds}.csv`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+
+  } catch(e){
+    alert('데이터 불러오기 오류: '+e.message);
+    console.error(e);
+  } finally {
+    if(btn){ btn.textContent='📥 전체 데이터 CSV'; btn.style.opacity=''; }
+  }
+}
+
 function downloadAllPDFDirect(){
   // 통계 데이터 수집
   const actLogs2 = allLogs.filter(l=>l.type==='activity');
@@ -5692,6 +5819,7 @@ function confirmReportCSV(){
   closeReportModal();
   if(reportMode.includes('week'))  generateWeekCSVFull(reportSelectedWeek);
   else if(reportMode.includes('month')) generateMonthCSVFull(reportSelectedMonth);
+  else if(reportMode==='all-csv') downloadAllCSVDirect();
 }
 
 /* ── 주간 PDF ── */
