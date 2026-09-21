@@ -5423,11 +5423,12 @@ async function downloadAllCSVDirect(){
 
   try {
     // Firebase에서 직접 최신 데이터 읽기
-    const [obsSnap, memosSnap, teacherSnap, soundSnap] = await Promise.all([
+    const [obsSnap, memosSnap, teacherSnap, soundSnap, kediSnap] = await Promise.all([
       _fbDB.ref('observations').once('value'),
       _fbDB.ref('memos').once('value'),
       _fbDB.ref('teacherObs').once('value'),
       _fbDB.ref('soundwalks').once('value'),
+      _fbDB.ref('kedi').once('value'),
     ]);
 
     // 관찰기록 통합 (observations + memos)
@@ -5558,6 +5559,34 @@ async function downloadAllCSVDirect(){
       csv += `${odate},${o.studentId},"${o.fileName}","${o.url}"\n`;
     });
     if(soundRows.length===0) csv += `(소리산책 녹음 기록 없음)\n`;
+
+    // ── 인성검사 결과 ──
+    const kediAreas2 = ['자기인식 및 관리','협력적 소통','대인관계 및 공동체','윤리적 책임'];
+    const kediShort2 = ['자기인식','협력소통','대인관계','윤리책임'];
+    const kediRawData = kediSnap.val()||{};
+    const getAreaAvg = (d, area) => {
+      if(!d?.submitted) return null;
+      const qs = KEDI_QUESTIONS.map((q,i)=>({...q,i})).filter(q=>q.area===area);
+      const vs = qs.map(q=>d[`q${q.i}`]).filter(v=>v);
+      return vs.length ? Math.round(vs.reduce((a,b)=>a+b,0)/vs.length*10)/10 : null;
+    };
+
+    csv += `\n[인성검사 결과 · KEDI 인성역량 검사]\n`;
+    csv += `학생,학년,회차,자기인식,협력소통,대인관계,윤리책임,제출일\n`;
+
+    students.forEach(s=>{
+      [1,2,3].forEach(round=>{
+        const d = kediRawData[`${s.id}_${round}`];
+        if(!d?.submitted) return;
+        const scores = kediAreas2.map(area=>getAreaAvg(d,area)||'');
+        const submittedDate = d.submittedAt ? new Date(d.submittedAt).toLocaleDateString('ko-KR') : '';
+        csv += `${s.id},${s.grade},${round}회차,${scores.join(',')},${submittedDate}\n`;
+      });
+    });
+
+    // 미제출 학생 표시
+    const noKedi = students.filter(s=>![1,2,3].some(r=>kediRawData[`${s.id}_${r}`]?.submitted));
+    if(noKedi.length>0) csv += `\n미제출: ${noKedi.map(s=>s.id).join(', ')}\n`;
 
     const blob = new Blob([csv], {type:'text/csv;charset=utf-8'});
     const a = document.createElement('a');
