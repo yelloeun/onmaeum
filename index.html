@@ -5571,22 +5571,38 @@ async function downloadAllCSVDirect(){
       return vs.length ? Math.round(vs.reduce((a,b)=>a+b,0)/vs.length*10)/10 : null;
     };
 
-    csv += `\n[인성검사 결과 · KEDI 인성역량 검사]\n`;
+    // [인성검사] 영역별 평균
+    csv += `\n[인성검사 결과 · 영역별 평균점수 (5점 만점)]\n`;
     csv += `학생,학년,회차,자기인식,협력소통,대인관계,윤리책임,제출일\n`;
-
     students.forEach(s=>{
       [1,2,3].forEach(round=>{
         const d = kediRawData[`${s.id}_${round}`];
         if(!d?.submitted) return;
-        const scores = kediAreas2.map(area=>getAreaAvg(d,area)||'');
+        const scores = kediAreas2.map(area=>getAreaAvg(d,area)??'');
         const submittedDate = d.submittedAt ? new Date(d.submittedAt).toLocaleDateString('ko-KR') : '';
         csv += `${s.id},${s.grade},${round}회차,${scores.join(',')},${submittedDate}\n`;
       });
     });
-
-    // 미제출 학생 표시
     const noKedi = students.filter(s=>![1,2,3].some(r=>kediRawData[`${s.id}_${r}`]?.submitted));
-    if(noKedi.length>0) csv += `\n미제출: ${noKedi.map(s=>s.id).join(', ')}\n`;
+    if(noKedi.length>0) csv += `미제출: ${noKedi.map(s=>s.id).join(', ')}\n`;
+
+    // [인성검사] 문항별 상세 점수
+    csv += `\n[인성검사 결과 · 문항별 상세 점수 (5점 만점)]\n`;
+    csv += `학생,학년,회차,영역,덕목,문항,점수,점수의미\n`;
+    const kediScale = ['','매우 아니다','아니다','보통이다','그렇다','매우 그렇다'];
+    students.forEach(s=>{
+      [1,2,3].forEach(round=>{
+        const d = kediRawData[`${s.id}_${round}`];
+        if(!d?.submitted) return;
+        KEDI_QUESTIONS.forEach((q,qi)=>{
+          const score = d[`q${qi}`];
+          if(!score) return;
+          const meaning = kediScale[score]||'';
+          const qText = q.text.replace(/"/g,'""');
+          csv += `${s.id},${s.grade},${round}회차,${q.area},${q.virtue},"${qText}",${score},${meaning}\n`;
+        });
+      });
+    });
 
     const blob = new Blob([csv], {type:'text/csv;charset=utf-8'});
     const a = document.createElement('a');
